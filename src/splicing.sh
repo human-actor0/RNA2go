@@ -59,20 +59,20 @@ if [ $# -lt 1 ]; then echo "$usage"; return; fi
 	cat $1 | hm bed enc | hm bed flank - ${p[0]} ${p[3]} -s > $tmpd/e
 	awk '$10==1' $2 | hm bed 5p - \
 	| intersectBed -a $tmpd/e -b stdin -wa -wb -S \
-        | perl -e 'use strict;  my %res=(); my @b=('$3');
-                while(<STDIN>){chomp; my @a=split/\t/,$_;
+    | perl -e 'use strict;  my %res=(); my @b=('$3');
+    	while(<STDIN>){chomp; my @a=split/\t/,$_;
 			my $k=join("\t",@a[0..5]);
 			my $l=$a[2]-$a[1];
 			my $p=$a[7]-$a[1]; $p = $l - $p if $a[5] eq "-";
 			if( $p <= $b[0] + $b[1]){
 				$res{$k}{5}{$p-$b[0]}++;
-			}elsif( $p >= $l - $b[2] -$b[3]){ 
-				print $p," ",$p-$l+$b[3]-1,"\n";
-				$res{$k}{3}{$p-$l+$b[3]-1}++;
+			}elsif( $p >= $l - $b[2] -$b[3]-1){ 
+				#print $p," ",$p-$l+$b[3]+1,"\n";
+				$res{$k}{3}{$p-$l+$b[3]+1}++;
 			}
-                }
-                foreach my $k (keys %res){
-                        print $k,"\t";
+       }
+       foreach my $k (keys %res){
+       		print $k,"\t";
 			if( defined $res{$k}{5}){
                         	print "\t",join( ",", map {"$_:$res{$k}{5}{$_}"} keys %{$res{$k}{5}});
 			}else{
@@ -98,14 +98,14 @@ splicing.relpos.test(){
 echo \
 "
 012345678901234567890123456789
-     EEEEEEEEEEEEEEE
-     eeeeeeeeeeeeeee    
-rrr
- rrr
-  rrr
-   rrr
-    rrr
+          EEEEEEEEEE
+          eeeeeeeeee    
      rrr
+      rrr
+       rrr
+        rrr
+         rrr
+          rrr
                     rrrrrr
                    rrrrrr
                   rrrrrr
@@ -123,4 +123,5 @@ rrr
 cat tmp.all | awk 'toupper($4)=="E"' | cut -f 1-6 > tmp.e 
 cat tmp.all | awk 'toupper( $4)=="R"' > tmp.r 
 splicing.relpos tmp.e tmp.r 1,2,3,4 3pnetseq 
+rm tmp.*
 }
