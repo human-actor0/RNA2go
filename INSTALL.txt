@@ -1,0 +1,8 @@
+
+== INSTALL ==
+add the following in the ~/.bash_profile
+HMHOME=<a path of RNA2go>
+export HMHOME
+PATH=$PATH:$HMHOME/bin
+export PATH;
+

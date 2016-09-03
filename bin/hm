@@ -1,0 +1,36 @@
+#!/bin/bash
+if [[ -z $HMHOME || $HMHOME = "" ]];then
+	HMHOME=`pwd`; 
+	echo "install hmtools .. ">&2
+	cmd="
+	## added by hmtools
+	HMHOME=$HMHOME; export HMHOME;
+	PATH=\$PATH:\$HMHOME:\$HMHOME/bin; export PATH;
+	## end hmtools"
+	echo "$cmd" >> ~/.bash_profile
+fi
+
+
+usage="
+hm <group> <function> ...
+type hm install for installation
+"
+
+if [ $# -lt 1 ];then 
+	echo "$usage"; exit 0;
+elif [ $# -eq  1 ];then
+	if [ $1 = "install" ];then
+echo '	## added by hmtools
+	HMHOME=$HMHOME; export HMHOME;
+	PATH=$PATH:$HMHOME/bin; export PATH
+	## end
+ ' >> ~/.bash_profile
+	source ~/.bash_profile
+	else
+		. "$HMHOME/src/${1}.sh"
+		compgen -A function | grep "^$1\+" | grep -vE "^dequote|^quote|^in_array"
+	fi
+else 
+	. $HMHOME/src/$1.sh;
+	$1.$2 ${@:3}
+fi
