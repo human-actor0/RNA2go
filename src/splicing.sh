@@ -72,7 +72,7 @@ if [ $# -lt 1 ]; then echo "$usage"; return; fi
 			}
        }
        foreach my $k (keys %res){
-       		print $k,"\t";
+       		print $k;
 			if( defined $res{$k}{5}){
                         	print "\t",join( ",", map {"$_:$res{$k}{5}{$_}"} keys %{$res{$k}{5}});
 			}else{
