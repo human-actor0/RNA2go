@@ -50,10 +50,10 @@ usage="$FUNCNAME <exon.bed> <read.bed12> <u5p>,<d5p>,<u3p>,<d3p> <exp_type>
 	--------[ exon          ]------------
 	  | u5p | u3p |    | u3p| d3p}
 
- exp_type: 3pnetseq, rnaseq 
+ exp_type: netseq3p, rnaseq 
 "
 if [ $# -lt 1 ]; then echo "$usage"; return; fi
-	if [ $4 == "3pnetseq" ];then
+	if [ $4 == "netseq3p" ];then
 	local tmpd=`hm util mktempd`;
 	local p=( `echo $3 | tr "," " "` );
 	cat $1 | hm bed enc | hm bed flank - ${p[0]} ${p[3]} -s > $tmpd/e
@@ -63,7 +63,7 @@ if [ $# -lt 1 ]; then echo "$usage"; return; fi
     	while(<STDIN>){chomp; my @a=split/\t/,$_;
 			my $k=join("\t",@a[0..5]);
 			my $l=$a[2]-$a[1];
-			my $p=$a[7]-$a[1]; $p = $l - $p if $a[5] eq "-";
+			my $p=$a[7]-$a[1]; $p = $l - $p - 1 if $a[5] eq "-";
 			if( $p <= $b[0] + $b[1]){
 				$res{$k}{5}{$p-$b[0]}++;
 			}elsif( $p >= $l - $b[2] -$b[3]-1){ 
@@ -118,10 +118,59 @@ echo \
            rrrrrr
           rrrrrr
                    RRRRRR
+      RRRRRR
 
 " | splicing.toy - > tmp.all
 cat tmp.all | awk 'toupper($4)=="E"' | cut -f 1-6 > tmp.e 
 cat tmp.all | awk 'toupper( $4)=="R"' > tmp.r 
-splicing.relpos tmp.e tmp.r 1,2,3,4 3pnetseq 
+splicing.relpos tmp.e tmp.r 1,2,3,4 netseq3p 
 rm tmp.*
 }
+
+splicing.relpos_to_table(){
+usage="$FUNCNAME <relpos>"
+if [ $# -lt 1 ];then echo "$usage"; return; fi
+	cat $1 | perl -e 'use strict; 
+	sub parse{
+		my ($id, $i, $r, $c,$t)= @_;
+		return if $i eq "null";
+		foreach my $xy (split/,/,$i){
+			my ($x,$y)=split/:/,$xy;
+			$c->{$x} ++;
+			$r->{$id}->{$t}->{$x} += $y;
+		}
+	}
+	my %res=(); 
+	my %col5=(); my %col3=();
+	while(<STDIN>){ chomp; my @a=split/\t/,$_;
+		parse(join("\t",@a[0..5]), $a[6], \%res, \%col5,5);
+		parse(join("\t",@a[0..5]), $a[7], \%res, \%col3,3);
+	}
+	my @c5=sort {$a<=>$b} keys %col5;
+	my @c3=sort {$a<=>$b} keys %col3;
+	print join("\t",("chrom","start","end","name","score","strand")),"\t";
+	print join("\t", map { "F.".$_ } @c5),"\t";
+	print join("\t", map { "T.".$_ } @c3),"\n";
+	foreach my $k ( keys %res ){
+		print $k;
+		foreach my $j (@c5){
+			my $v= defined $res{$k}{5}{$j} ? $res{$k}{5}{$j} : 0;
+			print "\t$v";
+		}
+		foreach my $j (@c3){
+			my $v= defined $res{$k}{3}{$j} ? $res{$k}{3}{$j} : 0;
+			print "\t$v";
+		}
+		print "\n";
+	}
+	' 
+}
+
+splicing.relpos_to_table.test(){
+echo \
+"chr1	100	200	n1	0	+	-4:1,-3:2,1:2,3:4	null
+chr1	100	200	n1	0	+	-4:1,-3:2,1:2,3:4	-1:1,-2:2,10:3
+chr1	200	400	n2	0	+	null	-4:1,-3:2,1:2,3:4" \
+| splicing.relpos_to_table  -
+}
+
