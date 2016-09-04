@@ -61,7 +61,7 @@ if [ $# -lt 1 ]; then echo "$usage"; return; fi
 	| intersectBed -a $tmpd/e -b stdin -wa -wb -S \
     | perl -e 'use strict;  my %res=(); my @b=('$3');
     	while(<STDIN>){chomp; my @a=split/\t/,$_;
-			my $k=join("\t",@a[0..5]);
+			my $k=$a[3]; $k=~s/@/\t/g;
 			my $l=$a[2]-$a[1];
 			my $p=$a[7]-$a[1]; $p = $l - $p - 1 if $a[5] eq "-";
 			if( $p <= $b[0] + $b[1]){
