@@ -24,9 +24,10 @@ usage="$FUNCNAME <sam>
 #2. collect coverage and other mutation for the indel sites (>10 reads maybe?).
 #3. calculate significance of the indel by comparing mutation and control samples.
 	if [ $# -lt 1 ];then echo "$usage"; return; fi
-	cat $1 | perl -ne 'use strict; my %res=();
-	while(<STDIN>){ chomp; my @a=split/\t/,$_;
+	cat $1 | perl -e 'use strict; my %res=();
+	while(<STDIN>){ chomp; 
 		if($_=~/^@/){ next;}
+		my @a=split/\t/,$_;
 		my $id=$a[0];
 		my $flag=$a[1];
 		my $chrom=$a[2];
@@ -40,7 +41,7 @@ usage="$FUNCNAME <sam>
 		my $gpos=0; my $spos=0;
 		while($cigar=~/(\d+)([MIDNSHPX=])/g){ 
 			my ($n,$c)=($1,$2);
-			if($c =~ /[MX=S]/){
+			if($c =~ /[MX=]/){
 				if($c eq "X"){
 					#print join("\t",( $chrom, $start+$gpos, $start+$gpos +$n, "X",substr($seq,$spos,$n),$strand)),"\n";
 					for( my $i=$start+$gpos;  $i < $start+$gpos+$n; $i++){
@@ -49,16 +50,18 @@ usage="$FUNCNAME <sam>
 				}
 				$gpos += $n;
 				$spos += $n;
-			}elsif($2 =~ /[DN]/){
+			}elsif($c =~ /[DN]/){
 				#print join("\t",( $chrom, $start+$gpos, $start+$gpos +$n, "D",$n,$strand)),"\n";
 				for( my $i=$start+$gpos;  $i < $start+$gpos+$n; $i++){
-						$res{ $chrom."\t".$i }{D}++;
+					$res{ $chrom."\t".$i }{D}++;
 				}
 				$gpos += $n;
-			}elsif($2 =~/[I]/){
+			}elsif($c =~/[I]/){
 				#print join("\t",( $chrom, $start+$gpos, $start+$gpos +$n, "I",substr($seq,$spos,$n),$strand)),"\n";
 				$res{ $chrom."\t".$gpos }{I}++;
 				$spos += $n;
+			}elsif($c =~/[S]/){
+				$spos += $n;	
 			}else{ # P
 			}
 		}
