@@ -45,6 +45,173 @@ ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC
                                     RRRRR
 " | splicing.toy -
 }
+
+splicing.table_exonpos(){
+usage="
+FUNC: calculate relative positions of exons from the minimum gene they belong to
+$FUNCNAME <gene.bed12> <exon.bed> <output>
+"
+if [ $# -ne 3 ];then echo "$usage"; return; fi
+overlap(){
+	cat $1 | perl -e 'use strict; my %res=(); my $option="'$2'";
+	while(<STDIN>){ chomp; my @a=split/\t/,$_;
+		my $k=$a[0].":".$a[3].":".$a[5];
+		if(defined $res{$k} ){
+			if($option eq "max"){
+				$res{ $k }{S}= $a[1] < $res{$k}{S} ? $a[1] : $res{$k}{S};  
+				$res{ $k }{E}= $a[2] > $res{$k}{E} ? $a[2] : $res{$k}{E};  
+			}else{
+				$res{ $k }{S}= $a[1] > $res{$k}{S} ? $a[1] : $res{$k}{S};  
+				$res{ $k }{E}= $a[2] < $res{$k}{E} ? $a[2] : $res{$k}{E};  
+			}
+		}else{
+			$res{ $k }{S}=$a[1]; 
+			$res{ $k }{E}=$a[2];
+		}
+	}
+	foreach my $k (keys %res){
+		my ($c,$g,$st)=split/:/,$k;
+		print $c,"\t",$res{$k}{S},"\t",$res{$k}{E},"\t",$g,"\t0\t$st\n";
+	}
+	'
+}
+	hm util mkdir $3;
+	cat $1 | cut -f1-6 > $3.gene;
+	cat $2 > $3.exon;
+
+	tail -n+2 $3.exon | overlap - max > $3.maxexon;
+	intersectBed -a $3.gene -b $3.maxexon -F 1 -wa -wb -s  \
+	| awk '$4==$(10)'\
+	| cut -f 1-6 \
+	| overlap - min > $3.mingene
+
+	head -n 1 $3.exon | awk -v OFS="\t" '{ print $0,"relpos";}' > $3
+
+	local nf=`awk '{print NF;}' $3.exon | head -n 1`;
+	tail -n+2 $3.exon | intersectBed -a stdin -b $3.mingene -wa -wb -s \
+	| perl -ne 'chomp; my @a=split/\t/,$_; my $M='$nf'; 
+		my $s=$a[1]-$a[$M+1]; if($a[5] eq "-"){ $s=$a[$M+2]-$a[2];} 
+		print join("\t",(@a[0..($M-1)],$s)),"\n";
+	' >> $3;
+
+}
+
+splicing.table_exonpos.test(){
+echo \
+"
+01234567890123456789012345678901234567890123456789
+    GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+       GGGGGGGGGGGGGGGG
+         GGGGGGGGGGGGGGGGGGGGGG
+         EEEEE
+           EEEEEEEEEEEE
+                     EEEEE
+" | splicing.toy - > tmp.all
+awk '$4 == "G"' tmp.all > tmp.gene
+awk '$4 == "E"' tmp.all | cut -f1-6 > tmp.exon
+	echo "==output==";
+	splicing.table_exonpos tmp.gene tmp.exon
+	rm tmp.*
+}
+
+splicing.psi_es(){
+usage="
+$FUNCNAME <transcript.bed12> <read.bed12> <output> [options]
+     /             E              \
+    ]----------[        ]----------[
+               ---    --- ( I )
+     \   I    /          \    I   /              
+"
+if [ $# -lt 3 ];then echo "$usage"; return; fi
+	cat $1 | perl -ne 'chomp; my @a=split/\t/,$_;
+		my @sizes=split/,/,$a[10];
+		my @starts=split/,/,$a[11];
+		for(my $i=1; $i < $a[9]-1; $i++ ){
+			my $lexon_start = $a[1] + $starts[$i-1];
+			my $lexon_end = $lexon_start + $sizes[$i-1];
+			my $exon_start = $a[1] + $starts[$i];
+			my $exon_end = $exon_start + $sizes[$i];
+			my $rexon_start = $a[1] + $starts[$i+1];
+			my $rexon_end = $rexon_start + $sizes[$i+1];
+			my $content=join(",",($lexon_start,$lexon_end,$rexon_start,$rexon_end));
+			my $content="null";
+			print $a[0],"\t",$exon_start,"\t",$exon_end,"\t",$a[3],"\t",0,"\t",$a[5],"\n";
+		}	
+	' | sort -u > $3.exon
+	intersectBed -a $3.exon -b ${2/-/stdin} ${@:4} -wa -wb \
+	| perl -e 'use strict; 
+	my %res=();
+	my $ancor_sum=0;
+	my $ancor_num=0;
+
+	while(<STDIN>){ chomp; my @a=split/\t/,$_;
+		my @l=split/,/,$a[16];
+		my @s=split/,/,$a[17];
+		my $id=join("\t",@a[0..5]);
+		my ($les,$lee,$res,$ree) = split /,/,$a[4];
+		my $max_l=$l[0];
+		for(my $i=1; $i < $a[15]; $i++){
+			$max_l=$l[$i] if $l[$i] > $max_l;
+			### consider exact posisionts
+			my $js= $a[7] + $s[$i-1]+$l[$i-1];
+			my $je= $a[7] + $s[$i];
+			#if ( $lee == $js  && $a[1] == $je || $a[2] == $js && $res == $je){
+			if ( $a[1] == $je ){
+				$res{$id}{I} ++;
+			}elsif( $a[2] == $js ){
+				$res{$id}{I} ++;
+			#}elsif( $lee == $js && $res == $je ){
+			}elsif( $a[1] > $js && $a[2] < $je ){
+				$res{$id}{E} ++;
+			} 
+		}
+		if( $a[15] > 1){
+			$ancor_sum += $max_l;
+			$ancor_num ++;
+		}
+		if( $a[15] == 1 && $a[1] <= $a[7] && $a[8] <= $a[2]){
+			$res{$id}{I} ++;
+		}
+
+	}
+	#print $ancor_sum/$ancor_num,"\n";
+	## put here to normalize PSI;
+	foreach my $k (keys %res){
+		print $k;
+		foreach my $i ( ("E","I")){
+			my $v= defined $res{$k}{$i} ? $res{$k}{$i} : 0;
+			print "\t$v";
+		}
+		print "\n";
+	}
+	' > $3
+	rm $3.exon
+}
+splicing.psi_es.test(){
+echo \
+"
+01234567890123456789012345678901234567890123456789
+ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC
+ EEEE-------------EEEEEEEE------------EEEEEEEEEEEE
+ EEEE-------------EEEEEEEE-----------EEEEEEEEEEEE
+  RRR-------------RR
+                  RRR
+                       RRRR
+                         R-----------RRRRR
+                         R------------RRRRR
+    R---------------------------------RRRRR
+    R--------------------------------RRRRR
+       R---------------------------RRRRR
+   rr-------------rrrrrr
+                RRRR 
+                         RRRRR
+" | splicing.toy - > tmp.all 
+cat tmp.all | awk '$4=="E"' > tmp.trans
+cat tmp.all | awk 'toupper($4)=="R"' > tmp.read
+splicing.psi_es tmp.trans tmp.read tmp.out -s
+head tmp*
+rm tmp.all tmp.trans tmp.read
+}
 splicing.relpos(){
 usage="$FUNCNAME <exon.bed> <read.bed12> <u5p>,<d5p>,<u3p>,<d3p> <exp_type>
 	--------[ exon          ]------------
@@ -172,5 +339,72 @@ echo \
 chr1	100	200	n1	0	+	-4:1,-3:2,1:2,3:4	-1:1,-2:2,10:3
 chr1	200	400	n2	0	+	null	-4:1,-3:2,1:2,3:4" \
 | splicing.relpos_to_table  -
+}
+
+splicing.table(){
+usage="$FUNCNAME <ctr.ei>[,<ctr.ei..] <trt.ei>[,<trt.ei>] [options]
+ [options]
+"
+if [ $# -ne 2 ];then echo "$usage"; return; fi
+perl -e 'use strict;
+	my $option="";
+	my @fctr=map{"$_"} split /,/,"'$1'";
+	my @ftrt=map{"$_"} split /,/,"'$2'";
+
+	sub readf{
+		my ($f,$r,$tag,$opt,$cols)=@_;
+		open(my $fh,"<",$f) or die "$! : $f";
+		while(<$fh>){chomp; my @a=split/\t/,$_;
+			for(my $j=0; $j < $#a-5; $j++){
+				my $tagj=$tag.".c".$j;
+				$cols->{$tagj}=1;
+				$r->{join("\t",@a[0..5])}{$tagj}=$a[$j+6];
+			}
+		}	
+		close($fh);
+	}
+	my %res=();
+	my $i=0;
+	my %cols=();
+	foreach my $f (@fctr){
+		readf($f,\%res,"ctr".$i,$option,\%cols); $i++;
+	}
+	$i=0;
+	foreach my $f (@ftrt){
+		readf($f,\%res,"trt".$i,$option,\%cols); $i++;
+	}
+	print join("\t",("chrom","start","end","name","score","strand")),"\t";
+	print join("\t",sort keys %cols),"\n";
+	foreach my $k (keys %res){
+		print $k;
+		foreach my $c (sort keys %cols){
+			my $v=0; $v=$res{$k}{$c} if defined $res{$k}{$c};
+			print "\t",$v;
+		}
+		print "\n";
+	}
+'
+
+}
+
+splicing.table.test(){
+	echo \
+"chr1	100	200	s	0	+	1	2	
+chr1	100	101	u	0	+	3	4
+chr1	50	200	s	0	-	5	6
+chr1	200	201	u	0	-	7	8
+chr1	199	200	u	0	+	9	10" > tmp.a
+
+splicing.table tmp.a tmp.a,tmp.a
+
+}
+
+splicing.table_filter(){
+usage="$FUNCNAME <table> <min> <non_zero>";
+if [ $# -lt 2 ]; then echo "$usage";return ; fi
+	cat $1 | perl -ne 'chomp; my @a=split /\t/,$_; 
+		my $sum=0;foreach my $e (@a[1..$#a]){ $sum += $e;} 
+		if($sum >= '$2'  || $a[0] eq "id"){ print $_,"\n";}
+	' 
 }
 

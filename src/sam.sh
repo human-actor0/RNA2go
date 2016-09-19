@@ -17,6 +17,10 @@ the interpretation of N is not defined.
 • Sum of lengths of the M/I/S/=/X operations shall equal the length of SEQ.
 '
 
+REF="
+http://davetang.org/wiki/tiki-index.php?page=SAM
+"
+
 sam.variants(){
 usage="$FUNCNAME <sam>
 "
@@ -56,11 +60,11 @@ usage="$FUNCNAME <sam>
 					$res{ $chrom."\t".$i }{D}++;
 				}
 				$gpos += $n;
-			}elsif($c =~/[I]/){
+			}elsif($c =~/I/){
 				#print join("\t",( $chrom, $start+$gpos, $start+$gpos +$n, "I",substr($seq,$spos,$n),$strand)),"\n";
-				$res{ $chrom."\t".$gpos }{I}++;
+				$res{ $chrom."\t".($start+$gpos) }{I}++;
 				$spos += $n;
-			}elsif($c =~/[S]/){
+			}elsif($c =~/S/){
 				$spos += $n;	
 			}else{ # P
 			}
@@ -94,67 +98,78 @@ r1	83	chr1	37	30	9M	=	7	-39	CAGCGCCAT	*"\
 
 
 sam.bed12(){
-usage="
-USAGE: $FUNCNAME <samtools options> <bam|sam>
-"
-if [ $# -lt 1 ];then echo "$usage"; return; fi
-	samtools view -b $@ | bamToBed -bed12
-}
-
-
-sam.bed(){
-usage="$FUNCNAME <sam>
+usage="$FUNCNAME <sam> [-x]
 "
 # reference from https://samtools.github.io/hts-specs/SAMv1.pdf
 if [ $# -lt 1 ]; then echo "$usage"; return; fi
-
-	cat $1 | perl -ne 'chomp; my @a=split/\t/,$_;
+	cat $1 | perl -ne 'chomp; my @a=split/\t/,$_; my $print_seq="'${2:-}'";
 		if($_=~/^@/){ next;}
 		my $id=$a[0];
 		my $flag=$a[1];
 		my $chrom=$a[2];
+		next if $chrom eq "*";
 		my $start=$a[3]-1;
 		my $mapq=$a[4]; # -10log10 Pr( wrong )
 		my $cigar=$a[5];
 		my $seq=$a[9];
 		my $len=0;
-		#my $strand="+"; if ( $flag & 16 ){ $strand="-"; }
 		my $strand="+"; if ( $flag & (0x10) ){ $strand="-"; }
 
 		my $gseq=""; # genomic sequence 
 		#\*|([0-9]+[MIDNSHPX=])+ 
-		my $pos=0; 
-		my @starts=(); my @sizes=(); ## prepare for bed12 
+		my @starts=(); 
+		my @sizes=(); 
+		my @seqs=();
 
-		my $offset=0;
+		my $gpos=0; 
+		my $spos=0; ## sequence offset
+		my $prev_c="";
 		while($cigar=~/(\d+)([MIDNSHPX=])/g){ 
 			my ($x,$c)=($1,$2);
 			if($c=~/[MX=]/){
-				#$gseq .= substr($seq,$offset,$x);
-				#$offset += $x; 
-				push @starts, $pos; push @sizes, $x;
-				$pos += $x;
+				if($prev_c eq "D"){
+					$sizes[$#sizes] += $x;
+					$seqs[$#seqs] .= substr($seq,$spos,$x);
+				}else{
+					push @starts, $gpos; 
+					push @sizes, $x;
+					push @seqs, substr($seq,$spos,$x);
+				}
+				$spos += $x;
+				$gpos += $x;
 			}elsif($c=~/[DN]/){
-				#$gseq .= "*"x$x;
-				$pos += $x; ## intron ..
-			}elsif($c=~/[S]/){
+				if( $c eq "D" ){
+					$seqs[$#seqs] .= "-"x$x;
+					$sizes[$#sizes] += $x;
+				}
+				$gpos += $x; 
+			}elsif($c=~/[SI]/){
 			## aware that soft/hard clipping does not affect genomic coordinates 
-			## ,but it affects mapped sequence
-				$offset += $x;
+				$spos += $x;
+			}elsif($c=~/P/){
+				$seqs[$#seqs] .= "*"x$x;
+				$sizes[$#sizes] += $x;
 			}else{
-				## I/P is not handled
+				## P is not handled
 			}
+			$prev_c=$c;
 		}
 		my $end=$start+$starts[$#starts]+$sizes[$#sizes];
+		my $str_sizes=join(",",@sizes);
+		my $str_starts=join(",",@starts);
+		my $str_seqs=join(",",@seqs);
+		if($print_seq eq "-x"){
+			$str_starts .= "\t".$str_seqs;
+		}
 		print join("\t",( 
 			$chrom,$start,$end,$id,$mapq,$strand,
 			$start,$end,"0,0,0",scalar @starts,
-			join(",",@sizes),join(",",@starts)
+			$str_sizes,$str_starts
 		)),"\n";
 			
 	'
 }
-sam.bed.test(){
+sam.bed12.test(){
 ## example from http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2723002/figure/F1/
 echo \
 "@HD	VN:1.0	SO:coordinate
@@ -169,7 +184,7 @@ r1	83	chr1	37	30	9M	=	7	-39	CAGCGCCAT	*"\
 echo "## sam input";
 cat tmp.inp
 echo "## output:";
-sam.bed tmp.inp 
+sam.bed12 tmp.inp -x
 echo \
 "chr1	6	22	TTAGATAAGATA*CTG	30	+
 chr1	8	18	AGATAAGATA	30	+
