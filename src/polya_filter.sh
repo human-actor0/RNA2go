@@ -1,7 +1,7 @@
 ## data obtained from  https://raw.githubusercontent.com/Bioconductor-mirror/cleanUpdTSeq/release-3.3/inst/extdata/test.bed
 #PeakName	prob False/oligodT internally primed	prob True	pred.class	UpstreamSeq	DownstreamSeq
-data="chr   start stop  name  score strand        upstream      downstream
-chr10 2965327 2965327 6hpas-22249   1       -     TCTTCATCATGGTCATCTCGCACCAGAGAGTGTGCCAGGG      CAGGAAGTTTTACCTGTCTGTCATTATCGT
+#data="chr   start stop  name  score strand        upstream      downstream
+data="chr10 2965327 2965327 6hpas-22249   1       -     TCTTCATCATGGTCATCTCGCACCAGAGAGTGTGCCAGGG      CAGGAAGTTTTACCTGTCTGTCATTATCGT
 chr10 2966558 2966558 6hpas-22250   1       -     ACCCTGGTGAGGGTATAGAGCTGGTCCAGTGTGCCACGGC      AAAGAGGAAAACAGCATTGTTCCTCCTGGA
 chr10 2974251 2974251 6hpas-22251   2       -     TGATTTGTTTGTAACTGATTTTATCTTTTAATAAAAAAGA      AAAAAGAAAGTCAAGCCAAGAGGCAAATAC
 chr10 2978441 2978441 6hpas-22252   1       -     GGAGCGCGACCGCATCAACAAAATCTTGCAGGATTATCAG      AAGAAAAAGATGGTGAGTTATTATCATTCA
@@ -43,22 +43,23 @@ cat $1 | perl -e 'use strict;
 		my ($chrom,$start,$end,$name,$score,$strand,$upseq,$dnseq) = split /\t/,$_;
 		## n.N.Downstream
 		my %D=();
+		my %d=();
+		## m: multinomial, n:normal, b:binomial
 		for(my $i=0; $i<length($dnseq); $i++){
 			my $nu=substr($dnseq,$i,1);
-			$D{"m.".$nu.".Downstream"} ++;
-			$D{"n.".$nu.".sum"} += $i;
-			$D{"n.".$nu.".n"} ++;
+			$D{"m:".$nu} ++;
+			$d{"n:".$nu}{sum} += $i;
+			$d{"n:".$nu}{num} ++;
 		}
-
-   
-
-
-
-
-		print $_,"\n";
-		foreach my $k (keys %D){
-			print $k,":",$D{$k},"\n";
+		foreach my $k (keys %d){
+			$D{$k} = $d{$k}{sum}/$d{$k}{num};
 		}
+		for(my $i=0; $i<length($upseq) - 5; $i++){
+			my $n6=substr($upseq,$i,6);
+			$D{"b:".$n6} = 1;
+		}
+		print $_,"\t";
+		print join("\t",( map{ "$_:$D{$_}"} keys %D)),"\n";
 	}
 '
 }
@@ -66,6 +67,164 @@ cat $1 | perl -e 'use strict;
 polya_filter.build_feature.test(){
 	echo "$data" | polya_filter.build_feature -
 }
+
+polya_filter.feature_logprob_bernoulli(){
+usage="$FUNCNAME <txt> [<alpha>]
+ <alpha> : default 1
+"
+if [ $# -lt 1 ];then echo "$usage"; return; fi
+	cat $1 | perl -e 'use strict; 
+	my $ALPHA='${2:-1}'; ## smoothing
+	my %Nyi=(); 
+	my %Ny=(); 
+	while(<STDIN>){chomp; my ($class,@fea)=split/\t/,$_;
+		$Ny{$class} ++; 
+		foreach my $f (@fea){
+			$Nyi{$f}{$class} ++;		
+		}
+	}
+
+	foreach my $f (keys %Nyi){
+		print $f;
+		foreach my $c (sort keys %Ny){
+			my $v= defined $Nyi{$f}{$c} ? $Nyi{$f}{$c} : 0;
+			## calculate p(x_i|y)
+			my $p=log($v+$ALPHA) - log( $Ny{$c} + 2*$ALPHA);
+			print "\t$p";
+		}
+		print "\n";
+	}
+	'
+}
+
+
+polya_filter.feature_logprob_multinomial(){
+usage="$FUNCNAME <txt> [<alpha>]
+ <alpha> : default 1
+"
+if [ $# -lt 1 ];then echo "$usage"; return; fi
+	cat $1 | perl -e 'use strict; 
+	my $ALPHA='${2:-1}'; ## smoothing
+	my %Nyi=();  ## N_yi
+	my %Ny=(); ## N_y
+	my $N=0;   ## N
+	my $n=0; 
+	my %ny=();
+
+	while(<STDIN>){chomp; my ($y,@fea)=split/\t/,$_;
+		$n++;
+		$ny{$y}++;
+		foreach my $tmp (@fea){
+			if( $tmp=~/(\w+):(\d+)/){
+				my ($f,$v)=($1,$2);
+				$Nyi{$f}{$y} += $v;
+				$Ny{$y} += $v;
+				$N += $v;
+			}
+		}
+	}
+
+	foreach my $f (keys %Nyi){
+		print $f;
+		foreach my $y (sort keys %ny){
+			my $v= defined $Nyi{$f}{$y} ? $Nyi{$f}{$y} : 0;
+
+			## calculate p(x_i|y)
+			my $p=log($v+$ALPHA) - log( $Ny{$y} + 2*$ALPHA *$n);
+			print "\t",$p;
+		}
+		print "\n";
+	}
+	'
+}
+
+polya_filter.feature_logprob_gaussian(){
+usage="$FUNCNAME <txt> [<alpha>]
+ <alpha> : default 1
+"
+if [ $# -lt 1 ];then echo "$usage"; return; fi
+	cat $1 | perl -e 'use strict; 
+	my $ALPHA='${2:-1}'; ## smoothing
+	my %Nyi=();  ## N_yi
+	my %N2yi=();  ## N^2_yi
+	my %Ny=(); ## N_y
+	my $N=0;   ## N
+	my $n=0; 
+	my %ny=();
+	my %A=();
+
+
+	while(<STDIN>){chomp; my ($y,@fea)=split/\t/,$_;
+		$n++;
+		$ny{$y}++;
+		foreach my $tmp (@fea){
+			if( $tmp=~/(\w+):(\d+)/){
+				my ($f,$v)=($1,$2);
+				$Nyi{$f}{$y} += $v;
+				$N2yi{$f}{$y} += $v*$v;
+				$Ny{$y} += $v;
+				$N += $v;
+			}
+		}
+	}
+
+	sub mean_sd{
+		my ($sum,$sumsq,$n) = @_; 
+		my $esp = 0.001;
+		my $mean = $sum/$n;
+		my $std = ($n > 1)? sqrt(($sumsq - $sum * $sum/$n)/($n-1)): $esp;
+		if($std < $esp){ $std=$esp;}
+		return ($mean,$std);
+	}
+
+	foreach my $f (keys %Nyi){
+		print $f;
+		foreach my $y (sort keys %ny){
+			my $sum= defined $Nyi{$f}{$y} ? $Nyi{$f}{$y} : 0;
+			my $sum2= defined $N2yi{$f}{$y} ? $N2yi{$f}{$y} : 0;
+
+			## calculate p(x_i|y)
+			my ($mu,$sig)=mean_sd($sum,$sum2,$ny{$y});
+			my $p="$mu,$sig";
+			print "\t",$p;
+		}
+		print "\n";
+	}
+	'
+}
+
+polya_filter.feature_logprob.test(){
+echo ">bernoulli"
+echo \
+"0	A	B	C
+0	A	B	C
+0	A	B	C
+0	A	B	C
+1	A	B	C
+1	A	B
+1	A" \
+	| polya_filter.feature_logprob_bernoulli -
+
+echo ">multinomial"
+echo \
+"0	A:1	B:1	C:1
+0	A:1	B:1	C:1
+1	A:1	B:1	C:1
+1	A:1	B:1
+1	A:1" \
+	| polya_filter.feature_logprob_multinomial -
+
+echo ">gaussian"
+echo \
+"0	A:1	B:1	C:1
+0	A:2	B:2	C:2
+1	A:3	B:3	C:3
+1	A:4	B:4
+1	A:5" \
+	| polya_filter.feature_logprob_gaussian -
+}
+
+
 
 data2="6hpas-78439	0.999146181625342	0.000853818374657752	0	GGTCATTGTCCTGCAAAATGGACTACTTAACCGAACTGGA	GAAGTATAAGAAGTAAGTACATTAAAGCTAC
 6hpas-78440	0.999999999999997	3.10583755675325e-15	0	TGGATTTAAATAACAAACAAGTTAAATAAAACGATTTGTA	AAAAAATAAAACAACTGAAGAAGAAAATGAA
