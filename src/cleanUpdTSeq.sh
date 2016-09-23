@@ -1,20 +1,15 @@
 
-cleanUpdTSeq.build_feature(){
-             library(cleanUpdTSeq)
-             testFile = system.file("extdata", "test.bed", package="cleanUpdTSeq")
-             testSet = read.table(testFile, sep = "\t", header = TRUE)
-             
-             #convert the test set to GRanges with upstream and downstream sequence information
-             peaks = BED2GRangesSeq(testSet,upstream.seq.ind = 7, downstream.seq.ind = 8, withSeq=TRUE)
-             #build the feature vector for the test set with sequence information 
-             testSet.NaiveBayes = buildFeatureVector(peaks,BSgenomeName = Drerio, upstream = 40,
-              downstream = 30, wordSize = 6, alphabet=c("ACGT"),
-              sampleType = "unknown",replaceNAdistance = 30, 
-             method = "NaiveBayes", ZeroBasedIndex = 1, fetchSeq = FALSE)
+extract_seq(){
+cmd='
+	## go to the data directory of the R package
+	load("data.NaiveBayes.rda")
+	d=data.NaiveBayes$Positive;
+	d1=data.frame(id=1:nrow(d),upseq=d$upstream.seq,dnseq=d$downstream.seq);
+	write.table(file="cleanUpdTSeq.pdata",d1,row.names=F,col.names=T,quote=F,sep="\t")
 
-write.table(testSet.NaiveBayes$data,file="testSet.feature",sep="\t",quote=F)
-             data(data.NaiveBayes)
-             predictTestSet(data.NaiveBayes$Negative, data.NaiveBayes$Positive, testSet.NaiveBayes,
-             outputFile = "test-predNaiveBayes.tsv", assignmentCutoff = 0.5)
-
+	d=data.NaiveBayes$Negative;
+	d1=data.frame(id=1:nrow(d),upseq=d$upstream.seq,dnseq=d$downstream.seq);
+	write.table(file="cleanUpdTSeq.ndata",d1,row.names=F,col.names=T,quote=F,sep="\t")
+' 
+echo "$cmd" | R --no-save 
 }

@@ -1,3 +1,15 @@
+
+
+util.prefixsufix(){
+	EXPANDED=()
+	for E in `cat ${@:3}`; do
+	    EXPANDED+=("$1${E}$2")
+	done
+	echo "${EXPANDED[@]}"
+}
+util.prefixsufix.test(){
+	echo "A B C" | util.prefixsufix "pre" "suf" -
+}
 util.mkdir(){
 	if [ -z "${1##*\/*}" ];then
                 mkdir -p ${3%/*}

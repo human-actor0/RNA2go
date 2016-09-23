@@ -1,4 +1,0 @@
-1      GATCTG
-2       GATCAG
-3       GTAGCC
-4       GTGGCC

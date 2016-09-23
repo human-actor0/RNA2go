@@ -1,5 +1,56 @@
+naivebayes.e1071_train(){
+usage="$FUNCNAME <pos.fea> <neg.fea> <out> [<laplace>]
+	<laplace>: default=1
+"
+if [ $# -lt 3 ];then echo "$usage"; return; fi
+cmd='
+	library(e1071);
+	laplace='${4:-1}';
+	data.p=read.table("'$1'",header=T);
+	data.n=read.table("'$2'",header=T);
+	data=rbind(
+		data.frame(y=0, data.p),
+		data.frame(y=1, data.n) )
+	m=naiveBayes(y ~ ., data=data);
+	saveRDS(m,"'$3'");		
+'
+echo "$cmd" | R --no-save 
+}
 
-naivebase.predict(){
+naivebayes.e1071_predict(){
+usage="$FUNCNAME <input.fea> <model.rda> <out>
+"
+if [ $# -lt 3 ];then echo "$usage"; return; fi
+cmd='
+	library(e1071);
+	m=readRDS("'$2'");
+	d=read.table("'$1'",header=T);
+ 	p=predict(m,d,type="raw");
+	pred=data.frame(id=d$id,p)
+	write.table(file="'$3'", pred,sep="\t",quote=F,row.names=F,col.names=T);
+'
+echo "$cmd" | R --no-save 
+}
+
+naivebayes.e1071.test(){
+echo \
+"id	v1	v2
+1	1	0
+2	1	0
+3	1	0" > tmp.p
+
+echo \
+"id	v1	v2
+4	0	1
+5	0	1
+6	0	1" > tmp.n
+naivebayes.e1071_train tmp.p tmp.n tmp.rds 1
+naivebayes.e1071_predict tmp.p tmp.rds tmp.out
+head tmp.*
+rm tmp.*
+
+}
+naivebayes.predict(){
 usage="$FUNCNAME <fea.txt> <model.txt>
 "
 if [ $# -ne 2 ];then echo "$usage"; return; fi
@@ -67,7 +118,7 @@ perl -e 'use strict;
 }
 
 
-naivebase.param(){
+naivebayes.param(){
 usage="$FUNCNAME <txt> [<alpha>]
  <alpha> : prior counts for smoothing ( default = 1 )
 "
@@ -135,8 +186,8 @@ echo \
 "0	b.A:1	m.A:1	n.A:10
 0	b.A:1	m.A:1	n.A:10
 1	b.B:1	m.B:1	n.B:20" > tmp.fea 
-naivebase.param tmp.fea  > tmp.param
-naivebase.predict tmp.fea tmp.param
+naivebayes.param tmp.fea  > tmp.param
+naivebayes.predict tmp.fea tmp.param
 
 head tmp.*
 rm tmp.*

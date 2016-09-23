@@ -1,4 +1,57 @@
 
+seq.kmers(){
+## obtained from Cook malcolm
+## http://comments.gmane.org/gmane.comp.lang.perl.bio.general/18242
+perlcode="
+        sub kmer{
+                my ($prefix,$t,$l,$r) = @_;
+                if($l<=0){ 
+                        push @$r,$prefix;
+                        return;
+                }
+                foreach my $nu ( "A", "C", "G", "T"){
+                        $t->{$nu} = undef;
+                        kmer($prefix.$nu,$t->{$nu},$l-1,$r);
+                }       
+        }       
+        my %trie=();
+        my @kmers=();
+        kmer("",\%trie,3,\@kmers);
+        print join("\n",@kmers),"\n";
+
+"
+k=$1;
+s=$( printf "%${k}s" ); # a string with $k blanks
+s=${s// /{A,T,G,C\}};   # substitute '{A,T,G,C}' for each of the k blanks
+echo 'kmers using bash to expand:' $s > /dev/stderr
+bash -c "echo  $s";     # let brace expanion of inferior bash compute the cross product
+
+}
+
+seq.mut(){
+usage="$FUNCNAME <seq> <mutations>";
+	echo $1 | perl -ne 'chomp; my @seq=split //,$_;
+		my @b=("A","C","G","T");
+		print $_;
+		for(my $i=0; $i<=$#seq; $i++){
+			foreach my $bi (@b){ if($bi ne  $seq[$i]){
+				my @s=@seq;
+				$s[$i]=$bi;
+				print " ",join( "",@s);
+			}}		
+		}
+		print "\n";
+	'	
+}
+
+
+seq.mut.test(){
+echo \
+"AAAA CAAA GAAA TAAA ACAA AGAA ATAA AACA AAGA AATA AAAC AAAG AAAT" > exp
+seq.mutate "AAAA" > obs
+check obs exp
+rm obs exp
+}
 seq.dist(){
 cat $1 | perl -e 'use strict;
 	sub dist{
@@ -24,7 +77,7 @@ echo \
 4	GTGGCC" | seq.dist -
 
 }
-seq.fasta(){
+seq.get(){
 usage="$FUNCNAME <genome.fa> <bed>  [options]
  [options] : read \"bedtools getfasta\"
 "
@@ -83,7 +136,7 @@ if [ $# -lt 2 ]; then echo "$usage"; return; fi
 	rm -rf $tmpd;
 }
 
-seq.fasta.test(){
+seq.get.test(){
 echo \
 ">one 
 ATGCATGCATGCATGCATGCATGCATGCAT 
@@ -96,6 +149,6 @@ samtools faidx tmp.fa
 echo \
 "one	0	3	n1	0	+
 two	0	5	n2	0	-" > tmp.bed
-seq.fasta tmp.fa tmp.bed -s 
+seq.get tmp.fa tmp.bed -s 
 rm tmp.*
 }

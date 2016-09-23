@@ -1,74 +1,141 @@
-## data obtained from  https://raw.githubusercontent.com/Bioconductor-mirror/cleanUpdTSeq/release-3.3/inst/extdata/test.bed
-#PeakName	prob False/oligodT internally primed	prob True	pred.class	UpstreamSeq	DownstreamSeq
-#data="chr   start stop  name  score strand        upstream      downstream
-data="chr10 2965327 2965327 6hpas-22249   1       -     TCTTCATCATGGTCATCTCGCACCAGAGAGTGTGCCAGGG      CAGGAAGTTTTACCTGTCTGTCATTATCGT
-chr10 2966558 2966558 6hpas-22250   1       -     ACCCTGGTGAGGGTATAGAGCTGGTCCAGTGTGCCACGGC      AAAGAGGAAAACAGCATTGTTCCTCCTGGA
-chr10 2974251 2974251 6hpas-22251   2       -     TGATTTGTTTGTAACTGATTTTATCTTTTAATAAAAAAGA      AAAAAGAAAGTCAAGCCAAGAGGCAAATAC
-chr10 2978441 2978441 6hpas-22252   1       -     GGAGCGCGACCGCATCAACAAAATCTTGCAGGATTATCAG      AAGAAAAAGATGGTGAGTTATTATCATTCA
-chr11 16772291        16772291        6hpas-33204   1       -     AGGGAAATAAATACAAAAGAATAAAAATATGATTCATTGT      AAGAAAAACACTTTAGCTACAAAAGTCCTT
-chr11 16777848        16777848        6hpas-33205   1       -     ATTTAGTTGGGTATTATTTCAAATAAAGAGAGAGAGAGAC      ACAAAAACTACATCAAATTTGAGGACAAAA
-chr11 17122845        17122845        6hpas-33209   1       -     TCAAAGTTAATGTACATTAAAAATGAGTCAAAATGTTTAG      AATAAAAGAAGATTTGAATGATATATTCTT
-chr11 17122856        17122856        6hpas-33210   2       -     TGAATGTATTTTCAAAGTTAATGTACATTAAAAATGAGTC      AAAATGTTTAGAATAAAAGAAGATTTGAAT
-chr11 17123062        17123062        6hpas-33211   1       -     TTGGATAGTAAATTAATTATTTATAAAGTTTCTAGATTAC      ATAAAGAAAATAAATCTGTTATATCTGTAT
-chr11 17123194        17123194        6hpas-33212   1       -     TGATCTCCATATGATATCACCGTCCCTATTTAACTTAAAG      GTTTATCTTGTTTATAAGGGTGTGATAGAA
-chr11 17123754        17123754        6hpas-33213   3       -     CCTCGATGATGCCGCCCGCAAAGCTGTCGCCGCCATTGCC      AAGAAATAAATGCAAATATTCATAATGCAC
-chr11 17204740        17204740        6hpas-33214   1       -     ATCGCCATTTTGCCCGTTCGTCATCGCATAAACCTGAGAC      AACCAAAAAAGGGCAAAGAGGCGGAGCTAC
-chr12 25855374        25855374        6hpas-43855   1       -     AAGGCCCAAACAGTAAAAAAAAATAAGACTGCTCTGCTTT      AAAAAAAAAAAAAAAAAAACCTTCAGTGGG
-chr12 26155099        26155099        6hpas-43856   2       -     AAGGTGTTTACATGTCTGTACTGCACTTCAATAATGTGAC      TAAAATAGGAATGCTCCAAATGGCTTCATT
-chr12 26155123        26155123        6hpas-43857   2       -     TTACACAACGCTAATGGTTTTATTAAGGTGTTTACATGTC      TGTACTGCACTTCAATAATGTGACTAAAAT
-chr12 26170452        26170452        6hpas-43858   1       -     TTTATTTTAATAAATAAGCATTTTTAAAAGACTTCATATT      AATCAAACATTGTCTTGTCTATCATTGCCT
-chr12 26295950        26295950        6hpas-43859   3       -     GAGAAGGAGAATGAGGAGAGTTTGAATCAAAATAATAATT      GAAAATAAAAAAAATAAAAAAAACTGGATG
-chr12 26295962        26295962        6hpas-43860   5       -     GAGGAGAAGCAAGAGAAGGAGAATGAGGAGAGTTTGAATC      AAAATAATAATTGAAAATAAAAAAAATAAA
-chr15 733981  733981  6hpas-71514   10      -     ATCTACAACCCCAAATCAGAAAAAGATTGGCACAGTATGG      AAAACACAAATAAAAAAGAAAGTGATTTAC
-chr15 734009  734009  6hpas-71515   2       -     TTTGTTACTTGAGACGCATCAAGATTTTATCTACAACCCC      AAATCAGAAAAAGATTGGCACAGTATGGAA
-chr15 735146  735146  6hpas-71516   13      -     ATTTGGTCCGGATCAAGGGTAATAAATGACACATTGTTGC      ATTTTCTGCCGTCTTTGGGTCGTTTTCACA
-chr15 735378  735378  6hpas-71517   5       -     GTTTTGAAATTGTGAGTATAAAGTAAATCTTTCAGTCATC      AGTGTTGAGTTTCATATACAGGAATCATGT
-chr15 735597  735597  6hpas-71518   2       -     GCTTCACGGTTGCCCTCAGTGTGGGAAGAGCTTCACTTGG      AAAAAAACCCTTATTGAGCATATGAAGGTT
-chr16 18304846        18304846        6hpas-78439   10      +     GGTCATTGTCCTGCAAAATGGACTACTTAACCGAACTGGA      GAAGTATAAGAAGTAAGTACATTAAAGCTA
-chr16 18312684        18312684        6hpas-78440   1       +     TGGATTTAAATAACAAACAAGTTAAATAAAACGATTTGTA      AAAAAATAAAACAACTGAAGAAGAAAATGA
-chr16 18316016        18316016        6hpas-78441   1       +     ATCTGCTTCAAAATGGATGCTCTGTTGAATCCTGAGCTCA      GGTAATCTTTCAAGTGCTGCTATTGAGCCA
-chr16 18316389        18316389        6hpas-78442   1       +     AAATGCTTGCACATAATAAATGTAGGCTTAAAAGATTTCA      AAACGTTTGTGAGAGACGGATTTTACTTTG"
+#!/bin/bash
 
-#    n.G <- unlist(lapply(1:length(downstream.seq), function(i) {
-#        table(factor(s2c(as.character(downstream.seq[i])), levels=c("G")))
-#    }))
-#
-#    avg.distanceA2PeakEnd <- unlist(lapply(1:dim(newData)[1], function(i) {
-#        temp <- mean(grep("A", s2c(as.character(downstream.seq[i]))))
-#        if (is.na(temp)) {replaceNAdistance} else {temp}
-#    }))
-polya_filter.build_feature(){
+## data obtained from  https://raw.githubusercontent.com/Bioconductor-mirror/cleanUpdTSeq/release-3.3/inst/extdata/test.bed
+data="chr10:2965327:2965327:6hpas-22249:1:-   TCTTCATCATGGTCATCTCGCACCAGAGAGTGTGCCAGGG        CAGGAAGTTTTACCTGTCTGTCATTATCGT
+chr10:2966558:2966558:6hpas-22250:1:-   ACCCTGGTGAGGGTATAGAGCTGGTCCAGTGTGCCACGGC        AAAGAGGAAAACAGCATTGTTCCTCCTGGA
+chr10:2974251:2974251:6hpas-22251:2:-   TGATTTGTTTGTAACTGATTTTATCTTTTAATAAAAAAGA        AAAAAGAAAGTCAAGCCAAGAGGCAAATAC
+chr10:2978441:2978441:6hpas-22252:1:-   GGAGCGCGACCGCATCAACAAAATCTTGCAGGATTATCAG        AAGAAAAAGATGGTGAGTTATTATCATTCA
+chr11:16772291:16772291:6hpas-33204:1:- AGGGAAATAAATACAAAAGAATAAAAATATGATTCATTGT        AAGAAAAACACTTTAGCTACAAAAGTCCTT
+chr11:16777848:16777848:6hpas-33205:1:- ATTTAGTTGGGTATTATTTCAAATAAAGAGAGAGAGAGAC        ACAAAAACTACATCAAATTTGAGGACAAAA
+chr11:17122845:17122845:6hpas-33209:1:- TCAAAGTTAATGTACATTAAAAATGAGTCAAAATGTTTAG        AATAAAAGAAGATTTGAATGATATATTCTT
+chr11:17122856:17122856:6hpas-33210:2:- TGAATGTATTTTCAAAGTTAATGTACATTAAAAATGAGTC        AAAATGTTTAGAATAAAAGAAGATTTGAAT
+chr11:17123062:17123062:6hpas-33211:1:- TTGGATAGTAAATTAATTATTTATAAAGTTTCTAGATTAC        ATAAAGAAAATAAATCTGTTATATCTGTAT
+chr11:17123194:17123194:6hpas-33212:1:- TGATCTCCATATGATATCACCGTCCCTATTTAACTTAAAG        GTTTATCTTGTTTATAAGGGTGTGATAGAA
+chr11:17123754:17123754:6hpas-33213:3:- CCTCGATGATGCCGCCCGCAAAGCTGTCGCCGCCATTGCC        AAGAAATAAATGCAAATATTCATAATGCAC
+chr11:17204740:17204740:6hpas-33214:1:- ATCGCCATTTTGCCCGTTCGTCATCGCATAAACCTGAGAC        AACCAAAAAAGGGCAAAGAGGCGGAGCTAC
+chr12:25855374:25855374:6hpas-43855:1:- AAGGCCCAAACAGTAAAAAAAAATAAGACTGCTCTGCTTT        AAAAAAAAAAAAAAAAAAACCTTCAGTGGG
+chr12:26155099:26155099:6hpas-43856:2:- AAGGTGTTTACATGTCTGTACTGCACTTCAATAATGTGAC        TAAAATAGGAATGCTCCAAATGGCTTCATT
+chr12:26155123:26155123:6hpas-43857:2:- TTACACAACGCTAATGGTTTTATTAAGGTGTTTACATGTC        TGTACTGCACTTCAATAATGTGACTAAAAT
+chr12:26170452:26170452:6hpas-43858:1:- TTTATTTTAATAAATAAGCATTTTTAAAAGACTTCATATT        AATCAAACATTGTCTTGTCTATCATTGCCT
+chr12:26295950:26295950:6hpas-43859:3:- GAGAAGGAGAATGAGGAGAGTTTGAATCAAAATAATAATT        GAAAATAAAAAAAATAAAAAAAACTGGATG
+chr12:26295962:26295962:6hpas-43860:5:- GAGGAGAAGCAAGAGAAGGAGAATGAGGAGAGTTTGAATC        AAAATAATAATTGAAAATAAAAAAAATAAA
+chr15:733981:733981:6hpas-71514:10:-    ATCTACAACCCCAAATCAGAAAAAGATTGGCACAGTATGG        AAAACACAAATAAAAAAGAAAGTGATTTAC
+chr15:734009:734009:6hpas-71515:2:-     TTTGTTACTTGAGACGCATCAAGATTTTATCTACAACCCC        AAATCAGAAAAAGATTGGCACAGTATGGAA
+chr15:735146:735146:6hpas-71516:13:-    ATTTGGTCCGGATCAAGGGTAATAAATGACACATTGTTGC        ATTTTCTGCCGTCTTTGGGTCGTTTTCACA
+chr15:735378:735378:6hpas-71517:5:-     GTTTTGAAATTGTGAGTATAAAGTAAATCTTTCAGTCATC        AGTGTTGAGTTTCATATACAGGAATCATGT
+chr15:735597:735597:6hpas-71518:2:-     GCTTCACGGTTGCCCTCAGTGTGGGAAGAGCTTCACTTGG        AAAAAAACCCTTATTGAGCATATGAAGGTT
+chr16:18304846:18304846:6hpas-78439:10:+        GGTCATTGTCCTGCAAAATGGACTACTTAACCGAACTGGA        GAAGTATAAGAAGTAAGTACATTAAAGCTA
+chr16:18312684:18312684:6hpas-78440:1:+ TGGATTTAAATAACAAACAAGTTAAATAAAACGATTTGTA        AAAAAATAAAACAACTGAAGAAGAAAATGA
+chr16:18316016:18316016:6hpas-78441:1:+ ATCTGCTTCAAAATGGATGCTCTGTTGAATCCTGAGCTCA        GGTAATCTTTCAAGTGCTGCTATTGAGCCA
+chr16:18316389:18316389:6hpas-78442:1:+ AAATGCTTGCACATAATAAATGTAGGCTTAAAAGATTTCA        AAACGTTTGTGAGAGACGGATTTTACTTTG"
+
+polyafilter.build_feature(){
+usage="$FUNCNAME <input>
+	<input> : tuples of id, upstream sequence, and downstream sequence
+	e.g.
+	polyA1    ATCTACAACCCCAAATCAGAAAAAGATTGGCACAGTATGG        AAAACACAAATAAAAAAGAAAGTGATTTAC
+
+"; if [ $# -lt 1 ];then echo "$usage"; return; fi
+
 cat $1 | perl -e 'use strict;
+	my @res=();
+	my @C=(); ## column names
+
+	sub genkmer{
+		my ($prefix,$t,$l,$r) = @_;
+		if($l<=0){ 
+			push @$r,$prefix;
+			return;
+		}
+		foreach my $nu ( "A", "C", "G", "T"){
+			$t->{$nu} = undef;
+			genkmer($prefix.$nu,$t->{$nu},$l-1,$r);
+		}
+	}
+
+
+	my %trie=();
+	my @kmers1=();
+	my @kmers2=();
+	my @kmers6=();
+	genkmer("",\%trie,1,\@kmers1);
+	genkmer("",\%trie,2,\@kmers2);
+	genkmer("",\%trie,6,\@kmers6);
+	push @C,"n.dnAdist";
+	foreach my $e (@kmers1){ push @C,"n:dn".$e; }
+	foreach my $e (@kmers2){ push @C,"n:dn".$e; }
+	foreach my $e (@kmers6){ push @C,"b:up".$e; }
+	
+	
 	while(<STDIN>){chomp; $_=~s/\s+/\t/g;
-		my ($chrom,$start,$end,$name,$score,$strand,$upseq,$dnseq) = split /\t/,$_;
-		## n.N.Downstream
+		my ($id,$upseq,$dnseq) = split /\t/,$_;
+		$upseq= uc $upseq; $dnseq=uc $dnseq;
+
 		my %D=();
-		my %d=();
-		## m: multinomial, n:normal, b:binomial
+
+		## feature prefix:  m: multinomial, n:normal, b:binomial
+		## handle downstream features
 		for(my $i=0; $i<length($dnseq); $i++){
 			my $nu=substr($dnseq,$i,1);
-			$D{"m:".$nu} ++;
-			$d{"n:".$nu}{sum} += $i;
-			$d{"n:".$nu}{num} ++;
+			$D{"n:dn".$nu} ++; 
+			if($nu eq "A"){
+				$D{"n:dnAdist"}{sum} += ($i+1); # 1-base
+				$D{"n:dnAdist"}{num} ++;
+			}
+			if( length($dnseq)-$i > 2){
+				my $nu2=substr($dnseq,$i,2);
+				$D{"n:dn".$nu2}++;
+			}
 		}
-		foreach my $k (keys %d){
-			$D{$k} = $d{$k}{sum}/$d{$k}{num};
+		if ( ! defined $D{"n:dnAdist"} ){
+			$D{"n:aveDA"}{sum}=length($dnseq);
+			$D{"n:aveDA"}{num}=1;
 		}
-		for(my $i=0; $i<length($upseq) - 5; $i++){
-			my $n6=substr($upseq,$i,6);
-			$D{"b:".$n6} = 1;
+
+		## hexamers in the upstream
+		my $k=6;
+		for(my $i=0; $i<length($upseq) - $k + 1; $i++){
+			$D{"b:up".substr($upseq,$i,$k)} = 1;
 		}
-		print $_,"\t";
-		print join("\t",( map{ "$_:$D{$_}"} keys %D)),"\n";
+		#print $_,"\t"; print join("\t",( map{ "$_:$D{$_}"} keys %D)),"\n";
+		push @res,[ $id, \%D ];
+	}
+	print "id\t",join("\t",@C),"\n";
+	foreach my $i (@res){
+		print $i->[0];
+		my $d=$i->[1];
+		foreach my $c (@C){
+			my $v= defined $d->{$c} ? $d->{$c} : 0;	
+			print "\t$v";
+		}
+		print "\n";
 	}
 '
 }
 
-polya_filter.build_feature.test(){
-	echo "$data" | polya_filter.build_feature -
+polyafilter.build_feature.test(){
+	echo "$data" | polyafilter.build_feature - 
 }
 
-polya_filter.feature_logprob_bernoulli(){
+polyafilter.train(){
+	hm naivebayes e1071_train $@
+}
+
+polyafilter.predict(){
+	hm naivebayes e1071_predict $@
+}
+
+polyafilter.train.test(){
+	echo "$data" | polyafilter.build_feature - > tmp.fea
+	n=`cat tmp.fea | wc -l`; 
+	echo "$n";
+	cat tmp.fea | awk -v OFS="\t" -v n="$n" 'NR <= n/2 {print $0;}' > tmp.pos
+	cat tmp.fea | awk -v OFS="\t" -v n="$n" 'NR==1 || NR > n/2 {print $0;}' > tmp.neg
+	hm naivebayes e1071_train tmp.rda tmp.pos tmp.neg 1
+	hm naivebayes e1071_predict tmp.out tmp.fea tmp.rda 
+}
+
+polyafilter.feature_logprob_bernoulli(){
 usage="$FUNCNAME <txt> [<alpha>]
  <alpha> : default 1
 "
@@ -98,7 +165,7 @@ if [ $# -lt 1 ];then echo "$usage"; return; fi
 }
 
 
-polya_filter.feature_logprob_multinomial(){
+polyafilter.feature_logprob_multinomial(){
 usage="$FUNCNAME <txt> [<alpha>]
  <alpha> : default 1
 "
@@ -138,7 +205,7 @@ if [ $# -lt 1 ];then echo "$usage"; return; fi
 	'
 }
 
-polya_filter.feature_logprob_gaussian(){
+polyafilter.feature_logprob_gaussian(){
 usage="$FUNCNAME <txt> [<alpha>]
  <alpha> : default 1
 "
@@ -193,7 +260,7 @@ if [ $# -lt 1 ];then echo "$usage"; return; fi
 	'
 }
 
-polya_filter.feature_logprob.test(){
+polyafilter.feature_logprob.test(){
 echo ">bernoulli"
 echo \
 "0	A	B	C
@@ -203,7 +270,7 @@ echo \
 1	A	B	C
 1	A	B
 1	A" \
-	| polya_filter.feature_logprob_bernoulli -
+	| polyafilter.feature_logprob_bernoulli -
 
 echo ">multinomial"
 echo \
@@ -212,7 +279,7 @@ echo \
 1	A:1	B:1	C:1
 1	A:1	B:1
 1	A:1" \
-	| polya_filter.feature_logprob_multinomial -
+	| polyafilter.feature_logprob_multinomial -
 
 echo ">gaussian"
 echo \
@@ -221,7 +288,7 @@ echo \
 1	A:3	B:3	C:3
 1	A:4	B:4
 1	A:5" \
-	| polya_filter.feature_logprob_gaussian -
+	| polyafilter.feature_logprob_gaussian -
 }
 
 
@@ -485,7 +552,7 @@ program='
 		writeModel(*STDOUT,$M);
 	}
 '
-#MODEL=${BASH_SOURCE%/*}/polya_filter_nb.model
+#MODEL=${BASH_SOURCE%/*}/polyafilter_nb.model
 #cmd=$program; 
 #cmd=${cmd//CMD/predict}; 
 #cmd=${cmd/MODEL/$MODEL};
