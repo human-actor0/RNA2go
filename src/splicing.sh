@@ -1,4 +1,14 @@
 
+splicing.jc(){
+usage="$FUNCNAME <bed12>" 
+if [ $# -lt 1 ];then echo "$usage"; return; fi
+	local tmp=${2:-"tmp"};
+	awk -v OFS="\t" '{ $4="j"; $5=1;}1' $1 \
+	| hm bed intron - \
+	| hm bed sum - 
+}
+
+
 splicing.toy(){
 usage="$FUNCNAME <intput.txt>"
 if [ $# -lt 1 ];then echo "$usage"; return; fi
@@ -45,6 +55,7 @@ ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC
                                     RRRRR
 " | splicing.toy -
 }
+
 
 splicing.table_exonpos(){
 usage="

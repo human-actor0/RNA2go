@@ -62,10 +62,10 @@ cat $1 | perl -e 'use strict;
 	genkmer("",\%trie,1,\@kmers1);
 	genkmer("",\%trie,2,\@kmers2);
 	genkmer("",\%trie,6,\@kmers6);
-	push @C,"n:dnAdist";
-	foreach my $e (@kmers1){ push @C,"n:dn".$e; }
-	foreach my $e (@kmers2){ push @C,"n:dn".$e; }
-	foreach my $e (@kmers6){ push @C,"b:up".$e; }
+	push @C,"n.dnAdist";
+	foreach my $e (@kmers1){ push @C,"n.dn".$e; }
+	foreach my $e (@kmers2){ push @C,"n.dn".$e; }
+	foreach my $e (@kmers6){ push @C,"b.up".$e; }
 	
 	
 	while(<STDIN>){chomp; $_=~s/\s+/\t/g;
@@ -79,26 +79,26 @@ cat $1 | perl -e 'use strict;
 		## handle downstream features
 		for(my $i=0; $i<length($dnseq); $i++){
 			my $nu=substr($dnseq,$i,1);
-			$D{"n:dn".$nu} ++; 
+			$D{"n.dn".$nu} ++; 
 			if($nu eq "A"){
 				$Adist{sum} += ($i+1); # 1-base
 				$Adist{num} ++;
 			}
 			if( length($dnseq)-$i > 2){
 				my $nu2=substr($dnseq,$i,2);
-				$D{"n:dn".$nu2}++;
+				$D{"n.dn".$nu2}++;
 			}
 		}
 		if ( defined $Adist{sum} ){
-			$D{"n:dnAdist"}=int($Adist{sum}/$Adist{num});
+			$D{"n.dnAdist"}=int($Adist{sum}/$Adist{num});
 		}else{
-			$D{"n:dnAdist"}=length($dnseq);
+			$D{"n.dnAdist"}=length($dnseq);
 		}
 
 		## hexamers in the upstream
 		my $k=6;
 		for(my $i=0; $i<length($upseq) - $k + 1; $i++){
-			$D{"b:up".substr($upseq,$i,$k)} = 1;
+			$D{"b.up".substr($upseq,$i,$k)} = 1;
 		}
 		#print $_,"\t"; print join("\t",( map{ "$_:$D{$_}"} keys %D)),"\n";
 		push @res,[ $id, \%D ];
@@ -123,7 +123,7 @@ polyafilter.updnseq2fea.test(){
 polyafilter.bed2updnseq(){
 usage="$FUNCNAME <bed> <fasta> [<upstream> <downstream>]"
 if [ $# -lt 2 ];then echo "$usage"; return; fi
-	local UP=${3:-39};	
+	local UP=${3:-40};	
 	local DN=${4:-30};	
 	hm bed enc $1 ":" | hm bed flank - $(( $UP - 1 )) $DN -s \
 	| hm seq get $2 - -s \
@@ -146,8 +146,8 @@ polyafilter.train.test(){
 	echo "$n";
 	cat tmp.fea | awk -v OFS="\t" -v n="$n" 'NR <= n/2 {print $0;}' > tmp.pos
 	cat tmp.fea | awk -v OFS="\t" -v n="$n" 'NR==1 || NR > n/2 {print $0;}' > tmp.neg
-	hm naivebayes e1071_train tmp.rda tmp.pos tmp.neg 1
-	hm naivebayes e1071_predict tmp.out tmp.fea tmp.rda 
+	hm naivebayes e1071_train tmp.pos tmp.neg tmp.rda 1
+	hm naivebayes e1071_predict tmp.fea tmp.rda tmp.out
 }
 
 polyafilter.feature_logprob_bernoulli(){

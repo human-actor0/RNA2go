@@ -9,8 +9,12 @@ cmd='
 	data.p=read.table("'$1'",header=T);
 	data.n=read.table("'$2'",header=T);
 	data=rbind(
-		data.frame(y=0, data.p),
-		data.frame(y=1, data.n) )
+		data.frame(y=as.factor(0), data.p),
+		data.frame(y=as.factor(1), data.n) )
+	data$id=NULL;
+	j=grep("^b.",colnames(data));
+	if(length(j)==1){ data[,j] = as.factor(data[,j]);
+	}else if(length(j)>1){ data[,j] = lapply( data[,j],as.factor); }
 	m=naiveBayes(y ~ ., data=data);
 	saveRDS(m,"'$3'");		
 '
@@ -26,6 +30,9 @@ cmd='
 	library(e1071);
 	m=readRDS("'$2'");
 	d=read.table("'$1'",header=T);
+	j=grep("^b.",colnames(d));
+	if(length(j)==1){ d[,j] = as.factor(d[,j]);
+	}else if(length(j)>1){ d[,j] = lapply( d[,j],as.factor); }
  	p=predict(m,d,type="raw");
 	pred=data.frame(id=d$id,p)
 	write.table(file="'$3'", pred,sep="\t",quote=F,row.names=F,col.names=F);
@@ -35,19 +42,20 @@ echo "$cmd" | R --no-save
 
 naivebayes.e1071.test(){
 echo \
-"id	v1	v2
-1	1	0
-2	1	0
-3	1	0" > tmp.p
+"id	b.v1	v2	v3
+1	1	0	0.5
+2	1	0	0.5
+3	1	0	0.5" > tmp.p
 
 echo \
-"id	v1	v2
-4	0	1
-5	0	1
-6	0	1" > tmp.n
+"id	b.v1	v2	v3
+4	0	1	0.5
+5	0	1	0.5
+6	0	1	0.5" > tmp.n
 naivebayes.e1071_train tmp.p tmp.n tmp.rds 1
-naivebayes.e1071_predict tmp.p tmp.rds tmp.out
-head tmp.*
+naivebayes.e1071_predict tmp.p tmp.rds tmp.p.pred
+naivebayes.e1071_predict tmp.n tmp.rds tmp.n.pred
+head tmp.*.pred
 rm tmp.*
 
 }
