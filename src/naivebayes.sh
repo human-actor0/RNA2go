@@ -21,13 +21,14 @@ naivebayes.e1071_predict(){
 usage="$FUNCNAME <input.fea> <model.rda> <out>
 "
 if [ $# -lt 3 ];then echo "$usage"; return; fi
+
 cmd='
 	library(e1071);
 	m=readRDS("'$2'");
 	d=read.table("'$1'",header=T);
  	p=predict(m,d,type="raw");
 	pred=data.frame(id=d$id,p)
-	write.table(file="'$3'", pred,sep="\t",quote=F,row.names=F,col.names=T);
+	write.table(file="'$3'", pred,sep="\t",quote=F,row.names=F,col.names=F);
 '
 echo "$cmd" | R --no-save 
 }

@@ -79,15 +79,17 @@ echo \
 }
 seq.get(){
 usage="$FUNCNAME <genome.fa> <bed>  [options]
- [options] : read \"bedtools getfasta\"
+ [options] : 
+  -s : revCompment for the negative strand 
 "
 if [ $# -lt 2 ];then echo "$usage"; return; fi
 #n1::one:0-3(+)
-	bedtools getfasta -fi $1 -bed $2 ${@:3} -name -tab \
-	| perl -ne 'chomp; my ($i,$s)=split/\t/,$_;
-		$i=~/(\w+)::(\w+):(\d+)-(\d+)\(([\+|-])\)/;
-		print $2,"\t",$3,"\t",$4,"\t",$1,"\t0\t",$5,"\t",$s,"\n";
+	bedtools getfasta -fi $1 -bed ${2/-stdin} ${@:3} -name  -tab \
+	| perl -ne 'chomp; if( $_=~ /(.+)::(.+)\t([ACGT]+)/){
+		print $1,"\t",$3,"\n";
+		}
 	'
+
 }
 
 seq.read(){

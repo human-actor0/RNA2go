@@ -1,4 +1,22 @@
+util.split(){
+usage="$FUNCNAME <file> <by_nlines> <out> 
+"
+if [ $# -lt 3 ];then echo "$usage"; return; fi
+	awk -v n=$2 -v o=$3 'NR%n==1{x=sprintf("%s.%d",o,++i);}{print > x}' $1
+#	split -l $2 $1 $3
+}
+util.split.test(){
+echo \
+"A	a
+B	b
+C	c
+D d
+E f	g" > tmp.i
+util.split tmp.i 2 tmp.o
+head tmp.o*
+rm tmp.i tmp.o*
 
+}
 
 util.prefixsufix(){
 	EXPANDED=()
@@ -12,7 +30,7 @@ util.prefixsufix.test(){
 }
 util.mkdir(){
 	if [ -z "${1##*\/*}" ];then
-                mkdir -p ${3%/*}
+                mkdir -p ${1%/*}
 	fi
 }
 util.mktempd(){

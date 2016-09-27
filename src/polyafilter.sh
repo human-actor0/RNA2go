@@ -29,7 +29,8 @@ chr16:18312684:18312684:6hpas-78440:1:+ TGGATTTAAATAACAAACAAGTTAAATAAAACGATTTGTA
 chr16:18316016:18316016:6hpas-78441:1:+ ATCTGCTTCAAAATGGATGCTCTGTTGAATCCTGAGCTCA        GGTAATCTTTCAAGTGCTGCTATTGAGCCA
 chr16:18316389:18316389:6hpas-78442:1:+ AAATGCTTGCACATAATAAATGTAGGCTTAAAAGATTTCA        AAACGTTTGTGAGAGACGGATTTTACTTTG"
 
-polyafilter.build_feature(){
+
+polyafilter.updnseq2fea(){
 usage="$FUNCNAME <input>
 	<input> : tuples of id, upstream sequence, and downstream sequence
 	e.g.
@@ -61,7 +62,7 @@ cat $1 | perl -e 'use strict;
 	genkmer("",\%trie,1,\@kmers1);
 	genkmer("",\%trie,2,\@kmers2);
 	genkmer("",\%trie,6,\@kmers6);
-	push @C,"n.dnAdist";
+	push @C,"n:dnAdist";
 	foreach my $e (@kmers1){ push @C,"n:dn".$e; }
 	foreach my $e (@kmers2){ push @C,"n:dn".$e; }
 	foreach my $e (@kmers6){ push @C,"b:up".$e; }
@@ -73,23 +74,25 @@ cat $1 | perl -e 'use strict;
 
 		my %D=();
 
+		my %Adist=();
 		## feature prefix:  m: multinomial, n:normal, b:binomial
 		## handle downstream features
 		for(my $i=0; $i<length($dnseq); $i++){
 			my $nu=substr($dnseq,$i,1);
 			$D{"n:dn".$nu} ++; 
 			if($nu eq "A"){
-				$D{"n:dnAdist"}{sum} += ($i+1); # 1-base
-				$D{"n:dnAdist"}{num} ++;
+				$Adist{sum} += ($i+1); # 1-base
+				$Adist{num} ++;
 			}
 			if( length($dnseq)-$i > 2){
 				my $nu2=substr($dnseq,$i,2);
 				$D{"n:dn".$nu2}++;
 			}
 		}
-		if ( ! defined $D{"n:dnAdist"} ){
-			$D{"n:aveDA"}{sum}=length($dnseq);
-			$D{"n:aveDA"}{num}=1;
+		if ( defined $Adist{sum} ){
+			$D{"n:dnAdist"}=int($Adist{sum}/$Adist{num});
+		}else{
+			$D{"n:dnAdist"}=length($dnseq);
 		}
 
 		## hexamers in the upstream
@@ -113,8 +116,20 @@ cat $1 | perl -e 'use strict;
 '
 }
 
-polyafilter.build_feature.test(){
-	echo "$data" | polyafilter.build_feature - 
+polyafilter.updnseq2fea.test(){
+	echo "$data" | polyafilter.updnseq2fea - 
+}
+
+polyafilter.bed2updnseq(){
+usage="$FUNCNAME <bed> <fasta> [<upstream> <downstream>]"
+if [ $# -lt 2 ];then echo "$usage"; return; fi
+	local UP=${3:-39};	
+	local DN=${4:-30};	
+	hm bed enc $1 ":" | hm bed flank - $(( $UP - 1 )) $DN -s \
+	| hm seq get $2 - -s \
+	| perl -ne 'chomp; my ($id,$seq)=split/\t/,$_;
+		print $id,"\t",substr($seq,0,'$UP'),"\t",substr($seq,'$UP','$DN'),"\n";
+	' 
 }
 
 polyafilter.train(){
@@ -126,7 +141,7 @@ polyafilter.predict(){
 }
 
 polyafilter.train.test(){
-	echo "$data" | polyafilter.build_feature - > tmp.fea
+	echo "$data" | polyafilter.updnseq2fea - > tmp.fea
 	n=`cat tmp.fea | wc -l`; 
 	echo "$n";
 	cat tmp.fea | awk -v OFS="\t" -v n="$n" 'NR <= n/2 {print $0;}' > tmp.pos
