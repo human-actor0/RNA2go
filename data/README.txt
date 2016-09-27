@@ -12,7 +12,7 @@ cmd="
 hm polyafilter predict tmp.neg $MODEL tmp.neg.pred 
 hm polyafilter predict tmp.pos $MODEL tmp.pos.pred 
 "; 
-echo "$cmd" | bsub
-#hm polyafilter predict neg.fea mod.rda neg.fea.pred
+#echo "$cmd" | bsub
+rm tmp.*
 
 
