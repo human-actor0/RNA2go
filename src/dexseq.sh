@@ -43,7 +43,6 @@ if [ $# -lt 4 ];then echo "$usage"; return; fi
 	dxd = estimateExonFoldChanges( dxd )
 	dxr <- DEXSeqResults( dxd )
 	write.table(dxr,file="'$4'",col.names=T,row.names=F,quote=F,sep="\t");
-)
 	'
 	echo "$cmd" | R --no-save 
 }

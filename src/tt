@@ -1,0 +1,86 @@
+
+R version 3.2.2 (2015-08-14) -- "Fire Safety"
+Copyright (C) 2015 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> countData <- matrix( rpois(100, 100), nrow=25 )
+> condition=rep( c("ctr", "trt"), each=2 ) 
+> sampleData <- data.frame(condition=condition)
+> design <- formula( ~ sample + exon + condition:exon )
+> groupID <- rep(
++ paste0("gene", 1:10),
++ each= 100 )
+> featureID <- rep(
++ paste0("exon", 1:100),
++ times= 10 )
+> 
+> colnames(countData) = condition;
+> res=data.frame(id=featureID, gid=groupID, countData);
+> write.table(res,file="tmp.i",col.names=T,row.names=F,quote=F,sep="\t");
+> 
+> 
+
+R version 3.2.2 (2015-08-14) -- "Fire Safety"
+Copyright (C) 2015 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> 	library(DEXSeq);
+> 	tt=read.table("tmp.i",header=T);
+> 	ctr.j=grep("ctr",colnames(tt));
+> 	trt.j=grep("trt",colnames(tt));
+> 	countData=cbind( tt[,ctr.j],tt[,trt.j]);
+> 	sampleData <- data.frame( condition=c(
++ 		rep( "ctr", length(ctr.j)), 
++ 		rep( "trt", length(trt.j)) ));
+> 	design <- formula( ~ sample + exon + condition:exon )
+> 	groupID <- tt$gid
+> 	featureID <- tt$id
+> 	dxd=DEXSeqDataSet( countData, sampleData, design, featureID, groupID )
+> 	dxd = estimateSizeFactors( dxd )
+> 	dxd = estimateDispersions( dxd )
+> 	dxd = testForDEU( dxd )
+> 	dxd = estimateExonFoldChanges( dxd )
+> 	dxr <- DEXSeqResults( dxd )
+> 	write.table(dxr,file="tmp.o",col.names=T,row.names=F,quote=F,sep="\t");
+> 	
+> 
+groupID	featureID	exonBaseMean	dispersion	stat	pvalue	padj	ctr	trt	log2fold_trt_ctr	genomicData	countData.1	countData.2	countData.3	countData.4
+gene1	exon1	100.175000657199	0.000746073998252529	0.0357043323134292	0.850127380420213	NA	NA	NA	NA	<S4 object of class "GRanges">	100	97	107	94
+gene1	exon2	103.67017818193	0.00220383057463458	0.563280382741027	0.452941537843192	0.581430800485977	20.4260881189888	19.1181029597832	-0.0954735587856002	<S4 object of class "GRanges">	107	108	113	84
+gene1	exon3	108.933462343377	0.000813723766980023	1.24126790620346	0.265226837238302	0.581430800485977	19.9091991143164	20.578689448394	0.0477159202269219	<S4 object of class "GRanges">	102	102	126	103
+gene1	exon4	99.895275475277	0.000947202650557667	0.17329223978119	0.677202312372719	NA	NA	NA	NA	<S4 object of class "GRanges">	91	103	111	92
+gene1	exon5	102.892735231194	0.000933506224066774	0.747381425821615	0.387306555325666	0.581430800485977	19.4750921284687	19.9093371384117	0.0318150356743319	<S4 object of class "GRanges">	97	98	119	95
+gene1	exon6	112.364456187434	0.00136740016013971	0.0267937165787941	0.869976872389109	0.869976872389109	20.8837667323241	20.2272966478602	-0.0460784308150591	<S4 object of class "GRanges">	106	119	102	119
+gene1	exon7	101.54489966023	0.000805423370557964	0.774849022480595	0.378721135987613	NA	NA	NA	NA	<S4 object of class "GRanges">	105	106	89	103
+gene1	exon8	101.806899056274	0.000985968788919164	1.19742141301388	0.273837664485145	NA	NA	NA	NA	<S4 object of class "GRanges">	103	111	87	103
+gene1	exon9	96.2641899861898	0.00186302994220722	0.279206868618658	0.597221534869078	NA	NA	NA	NA	<S4 object of class "GRanges">	94	103	83	102
