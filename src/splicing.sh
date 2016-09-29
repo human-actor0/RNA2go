@@ -439,6 +439,14 @@ chr1	199	200	u	0	+	9	10" > tmp.a
 
 splicing.table tmp.a tmp.a,tmp.a
 
+	echo \
+"chr1	100	200	s	0	+	1
+chr1	100	101	u	0	+	3
+chr1	50	200	s	0	-	5
+chr1	200	201	u	0	-	7
+chr1	199	200	u	0	+	9" > tmp.a
+splicing.table tmp.a tmp.a,tmp.a
+
 }
 
 splicing.table_filter(){
