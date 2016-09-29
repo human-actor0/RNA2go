@@ -1,4 +1,35 @@
 
+
+
+
+splicing.count_exon(){
+usage="
+$FUNCNAME <target.bed> <read.bed> [options]
+
+"
+if [ $# -lt 2 ];then echo "$usage"; return; fi
+	intersectBed -a ${1:-stdin} -b ${2:-stdin} -wa -c -F 1 ${@:3} \
+	| awk '$7 > 0'
+}
+splicing.count_exon.test(){
+echo \
+"01234567890123456789012345678901234567890123456789
+      AAAAAAA
+        BBBBBBB
+            CCCCCCCCCCCC
+" | hm bed toy - | cut -f1-6 > tmp.t
+echo \
+"01234567890123456789012345678901234567890123456789
+    RRRR
+     RRRRRR
+        RRRR
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+             rr
+                 rrrrrr
+" | hm bed toy - | cut -f1-6 > tmp.r
+	splicing.count_exon tmp.t tmp.r -s
+}
+
 splicing.jc(){
 usage="$FUNCNAME <bed12>" 
 if [ $# -lt 1 ];then echo "$usage"; return; fi

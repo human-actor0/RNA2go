@@ -48,10 +48,12 @@ ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC
 
 bed.exon(){
 usage="
-Exons of transcripts are merged into a gene when their boundaries are equal.
-Exons are sorted by their 5 prime occurrence.
-Suffix indexes are added (e.g., genename.exon#.sub ).
-USAGE: $FUNCNAME <bed12>
+FUNCTION:
+	Exons of transcripts are merged into a gene when their boundaries are equal.
+	Exons are sorted by their 5 prime occurrence.
+	Suffix indexes are added (e.g., genename.exon#.sub ).
+USAGE: 
+	$FUNCNAME <bed12>
 
 "
 if [ $# -ne 1 ];then echo "$usage"; return; fi
@@ -73,35 +75,18 @@ if [ $# -ne 1 ];then echo "$usage"; return; fi
 	}
 	foreach my $id (keys %res){
 		my ($chr,$gene,$strand) = split /\t/,$id;
-			my $i=0;
-			foreach my $s (sort {$a<=>$b} keys %{$res{$id}}){ my $j=0;
-				foreach my $e (sort {$a<=>$b} keys %{$res{$id}{$s}}){ my $n="$gene.E$i.$j";
-					if($strand eq "+"){
-						print $chr,"\t",$s,"\t",$e,"\t",$n,"\t0\t$strand\n";	
-					}else{
-						print $chr,"\t",-$e,"\t",-$s,"\t",$n,"\t0\t$strand\n";	
-					}
-					$j++;
+		my $i=0;
+		foreach my $s (sort {$a<=>$b} keys %{$res{$id}}){ my $j=0;
+			foreach my $e (sort {$a<=>$b} keys %{$res{$id}{$s}}){ my $n="$gene.E$i.$j";
+				if($strand eq "+"){
+					print $chr,"\t",$s,"\t",$e,"\t",$n,"\t0\t$strand\n";	
+				}else{
+					print $chr,"\t",-$e,"\t",-$s,"\t",$n,"\t0\t$strand\n";	
 				}
-				$i++;
+				$j++;
 			}
-		#if($strand eq "+"){ my $i=0;
-		#	foreach my $s (sort {$a<=>$b} keys %{$res{$id}}){ my $j=0;
-		#		foreach my $e (sort {$a<=>$b} keys %{$res{$id}{$s}}){ my $n="$gene.E$i.$j";
-		#			print $chr,"\t",$s,"\t",$e,"\t",$n,"\t0\t$strand\n";	
-		#			$j++;
-		#		}
-		#		$i++;
-		#	}
-		#}else{ my $i=0;
-		#	foreach my $e (sort {$b<=>$a} keys %{$res{$id}}){ my $j=0;
-		#		foreach my $s (sort {$b<=>$a} keys %{$res{$id}{$e}}){ my $n="$gene.E$i.$j";
-		#			print $chr,"\t",$s,"\t",$e,"\t",$n,"\t0\t$strand\n";	
-		#			$j++;
-		#		}
-		#		$i++;
-		#	}
-		#}
+			$i++;
+		}
 	}
 		
 	'
