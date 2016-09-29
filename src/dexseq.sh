@@ -22,8 +22,8 @@ write.table(res,file="'$OUT'",col.names=T,row.names=F,quote=F,sep="\t");
 echo "$cmd" | R --no-save 
 }
 dexseq.run(){
-usage="$FUNCNAME <table> <ctr> <trt>"
-if [ $# -lt 3 ];then echo "$usage"; return; fi
+usage="$FUNCNAME <table> <ctr> <trt> <out>"
+if [ $# -lt 4 ];then echo "$usage"; return; fi
 	cmd='
 	library(DEXSeq);
 	tt=read.table("'$1'",header=T);
@@ -39,25 +39,18 @@ if [ $# -lt 3 ];then echo "$usage"; return; fi
 	dxd=DEXSeqDataSet( countData, sampleData, design, featureID, groupID )
 	dxd = estimateSizeFactors( dxd )
 	dxd = estimateDispersions( dxd )
-tryCatch({
-	dxd = estimateDispersions( dxd )
 	dxd = testForDEU( dxd )
-	},error=function(cond){
-		
-		message("..use gene wise dispersion..");
-	}, finally={
-		message("final");
-	}
+	dxd = estimateExonFoldChanges( dxd )
+	dxr <- DEXSeqResults( dxd )
+	write.table(dxr,file="'$4'",col.names=T,row.names=F,quote=F,sep="\t");
 )
-#dxd = estimateExonFoldChanges( dxd, fitExpToVar="condition")
-#dxr1 = DEXSeqResults( dxd )
-#dxr1
-	
 	'
 	echo "$cmd" | R --no-save 
 }
 
 dexseq.run.test(){
 	dexseq.gen tmp.i
-	dexseq.run tmp.i ctr trt 
+	dexseq.run tmp.i ctr trt tmp.o
+	head tmp.o
+	rm tmp.*
 }
