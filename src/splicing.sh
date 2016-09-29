@@ -449,6 +449,30 @@ splicing.table tmp.a tmp.a,tmp.a
 
 }
 
+splicing.table2dexseq(){
+cat $1 | perl -e 'use strict; my $first=1;
+	while(<STDIN>){chomp; my @a=split/\t/,$_;	
+		if($first){ 
+			print join("\t",("id","gid",@a[6..$#a],)),"\n";
+			$first=0;
+		}elsif( $a[3]=~/(\w+)\.(E[\d\.]+)/){
+			print join ("@",@a[0..5]),"\t",$1,"\t";
+			print join ("\t",@a[6..$#a]),"\n";
+			
+		}else{	
+			die "4th column needs gene.exon names e.g. \w+\.E[\d\.]+";
+		}
+	}
+'
+}
+splicing.table2dexseq.test(){
+echo \
+"chr	start	end	name	score	strand	ctr1	ctr2	trt1
+chr1	100	200	G1.E1	0	+	1	2	3
+chr1	100	200	G1.E2	0	+	1	2	3
+chr1	100	200	G2.E1	0	+	1	2	3" | splicing.table2dexseq -
+}
+
 splicing.table_filter(){
 usage="$FUNCNAME <table> <min> <non_zero>";
 if [ $# -lt 2 ]; then echo "$usage";return ; fi
