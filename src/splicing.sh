@@ -1,14 +1,12 @@
 
 
-
-
 splicing.count_exon(){
 usage="
 $FUNCNAME <target.bed> <read.bed> [options]
 
 "
 if [ $# -lt 2 ];then echo "$usage"; return; fi
-	intersectBed -a ${1:-stdin} -b ${2:-stdin} -wa -c -F 1 ${@:3} \
+	intersectBed -a ${1:-stdin} -b ${2:-stdin} -wa -c ${@:3} \
 	| awk '$7 > 0'
 }
 splicing.count_exon.test(){
