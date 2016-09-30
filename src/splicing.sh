@@ -450,17 +450,27 @@ splicing.table tmp.a tmp.a,tmp.a
 }
 
 splicing.table2dexseq(){
-cat $1 | perl -e 'use strict; my $first=1;
+## remove entries having one exon 
+cat $1 | perl -e 'use strict; my $first=1; my $res=();
 	while(<STDIN>){chomp; my @a=split/\t/,$_;	
 		if($first){ 
 			print join("\t",("id","gid",@a[6..$#a],)),"\n";
 			$first=0;
 		}elsif( $a[3]=~/(\w+)\.(E[\d\.]+)/){
-			print join ("@",@a[0..5]),"\t",$1,"\t";
-			print join ("\t",@a[6..$#a]),"\n";
+			my $id=join ("@",@a[0..5]);
+			my $gid=$1;
+			my $vals=join ("\t",@a[6..$#a]);
+			$res{$gid}{$id}=$vals;
 			
 		}else{	
 			die "4th column needs gene.exon names e.g. \w+\.E[\d\.]+";
+		}
+	}
+	foreach my $gid (keys %res){
+		my @ids=keys %{$res{$gid}};	
+		next if $#ids < 1;
+		foreach my $id (@ids){
+			print $id,"\t",$gid,"\t",$res{$gid}{$id},"\n";
 		}
 	}
 '
