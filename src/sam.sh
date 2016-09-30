@@ -1,3 +1,7 @@
+SAMHEADER="@HD	VN:1.0	SO:coordinate
+@SQ	SN:chr1	LN:249250621
+@PG	ID:hisat2	PN:hisat2	VN:2.0.4	CL:\"hi\""	
+
 CIGAR_FORMAT='
 Op BAM Description
 M 0 alignment match (can be a sequence match or mismatch)
@@ -87,7 +91,7 @@ sam.variants.test(){
 echo \
 "@HD	VN:1.0	SO:coordinate
 @SQ	SN:chr1	LN:249250621
-r1	163	chr1	7	30	8M2I4X1D3M	=	37	39	TTAGATAAAGGATACTG *
+r1	163	chr1	7	30	8M2I4X1D3M	=	37	39	TTAGATAAAGGATACTG	*
 r2	0	chr1	9	30	3S6M1P1I4M	*	0	0	AAAAGATAAGGATA	*
 r3	0	chr1	9	30	5H6X1S	*	0	0	AGCTAAa	*	NM:i:1
 r4	0	chr1	16	30	6M14N5M	*	0	0	ATAGCTTCAGC	*
@@ -127,7 +131,7 @@ if [ $# -lt 1 ]; then echo "$usage"; return; fi
 		while($cigar=~/(\d+)([MIDNSHPX=])/g){ 
 			my ($x,$c)=($1,$2);
 			if($c=~/[MX=]/){
-				if($prev_c eq "D"){
+				if($prev_c eq "D" or $prev_c eq "I"){
 					$sizes[$#sizes] += $x;
 					$seqs[$#seqs] .= substr($seq,$spos,$x);
 				}else{
@@ -144,11 +148,8 @@ if [ $# -lt 1 ]; then echo "$usage"; return; fi
 				}
 				$gpos += $x; 
 			}elsif($c=~/[SI]/){
-			## aware that soft/hard clipping does not affect genomic coordinates 
+				## aware that soft/hard clipping does not affect genomic coordinates 
 				$spos += $x;
-			}elsif($c=~/P/){
-				$seqs[$#seqs] .= "*"x$x;
-				$sizes[$#sizes] += $x;
 			}else{
 				## P is not handled
 			}
@@ -172,19 +173,22 @@ if [ $# -lt 1 ]; then echo "$usage"; return; fi
 sam.bed12.test(){
 ## example from http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2723002/figure/F1/
 echo \
-"@HD	VN:1.0	SO:coordinate
-@SQ	SN:chr1	LN:249250621
-r1	163	chr1	7	30	8M2I4M1D3M	=	37	39	TTAGATAAAGGATACTG *
+"$SAMHEADER
+r1	163	chr1	7	30	8M2I4M1D3M	=	37	39	TTAGATAAAGGATACTG	*
 r2	0	chr1	9	30	3S6M1P1I4M	*	0	0	AAAAGATAAGGATA	*
 r3	0	chr1	9	30	5H6M1S	*	0	0	AGCTAAa	*	NM:i:1
 r4	0	chr1	16	30	6M14N5M	*	0	0	ATAGCTTCAGC	*
 r3	16	chr1	29	30	6H5M	*	0	0	TAGGC	*	NM:i:0
 r1	83	chr1	37	30	9M	=	7	-39	CAGCGCCAT	*"\
 > tmp.inp
-echo "## sam input";
-cat tmp.inp
-echo "## output:";
+#echo "## sam input";
+#cat tmp.inp
+#echo "## output:";
+echo "> bamToBed"
+cat tmp.inp | samtools view -b - | bamToBed -bed12
+echo "> sam.bed12"
 sam.bed12 tmp.inp -x
+
 echo \
 "chr1	6	22	TTAGATAAGATA*CTG	30	+
 chr1	8	18	AGATAAGATA	30	+
