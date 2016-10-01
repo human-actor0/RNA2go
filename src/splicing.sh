@@ -1,12 +1,70 @@
 
+splicing.exon(){
+usage="
+FUNCTION:
+	Exons of transcripts are merged into a gene (4th column) when their boundaries are equal.
+	Exons are sorted by their 5 prime occurrence.
+	Suffix added (e.g., genename.exon#.sub ).
+USAGE: 
+	$FUNCNAME <bed12>
+
+"
+if [ $# -ne 1 ];then echo "$usage"; return; fi
+	cat $1 | perl -e 'use strict; my %res=();
+	while(<STDIN>){ chomp;my @a=split/\t/,$_;
+		my @sizes=split/,/,$a[10];	
+		my @starts=split/,/,$a[11];	
+		my $n=$a[9];
+		for( my $i=0; $i<$n; $i++){
+			my $id=$a[0]."\t".$a[3]."\t".$a[5];
+			my $s= $a[1] + $starts[$i];
+			my $e= $s + $sizes[$i];
+			if( $a[5] eq "+"){
+				$res{$id}{$s}{$e} ++; 
+			}else{
+				$res{$id}{-$e}{-$s} ++; 
+			}
+		}
+	}
+	foreach my $id (keys %res){
+		my ($chr,$gene,$strand) = split /\t/,$id;
+		my $i=0;
+		foreach my $s (sort {$a<=>$b} keys %{$res{$id}}){ my $j=0;
+			foreach my $e (sort {$a<=>$b} keys %{$res{$id}{$s}}){ my $n="$gene.E$i.$j";
+				if($strand eq "+"){
+					print $chr,"\t",$s,"\t",$e,"\t",$n,"\t0\t$strand\n";	
+				}else{
+					print $chr,"\t",-$e,"\t",-$s,"\t",$n,"\t0\t$strand\n";	
+				}
+				$j++;
+			}
+			$i++;
+		}
+	}
+		
+	'
+}
+splicing.exon.test(){
+echo "
+012345678901234567890123456789
+ EEE---------EEE----EEEEEE
+ EEE---------EEEE---EEEEEE
+ eee---------eee----eeeeee
+ eee---------eeee---eeeeee
+" |  hm bed toy - | splicing.exon - 
+}
 
 splicing.count_exon(){
 usage="
-$FUNCNAME <target.bed> <read.bed> [options]
-
+FUNCTION: count number of contiguous reads overlapping with exons
+USAGE: $FUNCNAME <target.bed> <read.bed> [options]
+OPTIONS:
+	-s : count reads on the same strand
+	-S : count reads on the opposite starnd 
 "
 if [ $# -lt 2 ];then echo "$usage"; return; fi
-	intersectBed -a ${1:-stdin} -b ${2:-stdin} -wa -c ${@:3} \
+	awk 'NF <= 6 || $10==1' $2 \
+	| intersectBed -a ${1/-/stdin} -b stdin -wa -c ${@:3} \
 	| awk '$7 > 0'
 }
 splicing.count_exon.test(){
@@ -20,12 +78,13 @@ echo \
 "01234567890123456789012345678901234567890123456789
     RRRR
      RRRRRR
+        RRRRRRR-RRRRR
         RRRR
-RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
              rr
                  rrrrrr
-" | hm bed toy - | cut -f1-6 > tmp.r
+" | hm bed toy -  > tmp.r
 	splicing.count_exon tmp.t tmp.r -s
+rm tmp.*
 }
 
 splicing.jc(){
