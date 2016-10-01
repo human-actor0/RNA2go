@@ -48,48 +48,21 @@ ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC
 
 bed.exon(){
 usage="
-FUNCTION:
-	Exons of transcripts are merged into a gene when their boundaries are equal.
-	Exons are sorted by their 5 prime occurrence.
-	Suffix indexes are added (e.g., genename.exon#.sub ).
-USAGE: 
-	$FUNCNAME <bed12>
-
+USAGE: $FUNCNAME <bed12> 
 "
 if [ $# -ne 1 ];then echo "$usage"; return; fi
-	cat $1 | perl -e 'use strict; my %res=();
-	while(<STDIN>){ chomp;my @a=split/\t/,$_;
-		my @sizes=split/,/,$a[10];	
-		my @starts=split/,/,$a[11];	
-		my $n=$a[9];
-		for( my $i=0; $i<$n; $i++){
-			my $id=$a[0]."\t".$a[3]."\t".$a[5];
-			my $s= $a[1] + $starts[$i];
-			my $e= $s + $sizes[$i];
-			if( $a[5] eq "+"){
-				$res{$id}{$s}{$e} ++; 
-			}else{
-				$res{$id}{-$e}{-$s} ++; 
-			}
-		}
-	}
-	foreach my $id (keys %res){
-		my ($chr,$gene,$strand) = split /\t/,$id;
-		my $i=0;
-		foreach my $s (sort {$a<=>$b} keys %{$res{$id}}){ my $j=0;
-			foreach my $e (sort {$a<=>$b} keys %{$res{$id}{$s}}){ my $n="$gene.E$i.$j";
-				if($strand eq "+"){
-					print $chr,"\t",$s,"\t",$e,"\t",$n,"\t0\t$strand\n";	
-				}else{
-					print $chr,"\t",-$e,"\t",-$s,"\t",$n,"\t0\t$strand\n";	
-				}
-				$j++;
-			}
-			$i++;
-		}
-	}
-		
-	'
+	##  [es   ]s----e[    ee]
+	cat $1 | awk -v OFS="\t" '{
+		## take introns
+		split($11,sizes,",");
+		split($12,starts,",");
+		for(i=1;i<= $10;i++){
+			## exon
+			s = $2 + starts[i];
+			e = s + sizes[i];
+			print $1,s,e,$4,$5,$6;
+		}	
+	}' 
 }
 bed.exon.test(){
 echo "
