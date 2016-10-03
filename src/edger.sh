@@ -1,15 +1,15 @@
 edger.rep(){
 usage(){ echo "
-$FUNCNAME <table> <ctr_col> <trt_col> [option]
+$FUNCNAME <table> <ctr_col> <trt_col> <out> 
  [option]
 	nooptions 
 "
 }
-	if [ $# -lt 3 ];then usage;return; fi
-	cat $1 | hm util run_R '
+	if [ $# -lt 4 ];then usage;return; fi
+	cmd='
 	library(edgeR)
 	CTR="^'$2'"; TRT="^'$3'"; 
-	tt=read.table("stdin",header=T,check.names=F);
+	tt=read.table("'$1'",header=T,check.names=F);
 	cn=colnames(tt);
 	m=tt[,c(grep(CTR,cn), grep(TRT,cn))];
 
@@ -35,15 +35,18 @@ $FUNCNAME <table> <ctr_col> <trt_col> [option]
 	tt[["pval"]]=llh$table$PValue;
 	##res=data.frame(tt, nn=llh$table$logFC, pval=llh$table$PValue)
 	## chrom start end logFC pval
-	write.table(tt,file="stdout", col.names=T,quote=F,row.names=F,sep="\t");
+	write.table(tt,file="'$4'", col.names=T,quote=F,row.names=F,sep="\t");
 	' 
+	echo "$cmd" | R --no-save
 }
 edger.rep.test(){
 echo \
 "x@trt@ctr	trt1	trt2	ctr1	ctr2
 a	1	2	10	20
-b	4	0	50	0" \
-| edger.rep - ctr trt
+b	4	0	50	0" > tmp.in
+edger.rep tmp.in ctr trt tmp.out
+head tmp.out
+rm tmp.*
 
 
 }
