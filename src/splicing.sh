@@ -6,10 +6,15 @@ FUNCTION:
 	Exons are sorted by their 5 prime occurrence.
 	Suffix added (e.g., genename.exon#.sub ).
 USAGE: 
-	$FUNCNAME <bed12>
-
+	$FUNCNAME <bed12> <output> [options]
 "
-if [ $# -ne 1 ];then echo "$usage"; return; fi
+if [ $# -lt 1 ];then echo "$usage"; return; fi
+	hm bed exon $1 \
+	| awk '{ print $1"@"$4"@"$6"\t"$2"\t"$3;}' \
+	| hm bed sort \
+	| mergeBed -i stdin
+
+	return
 	cat $1 | perl -e 'use strict; my %res=();
 	while(<STDIN>){ chomp;my @a=split/\t/,$_;
 		my @sizes=split/,/,$a[10];	
@@ -49,9 +54,10 @@ echo "
 012345678901234567890123456789
  EEE---------EEE----EEEEEE
  EEE---------EEEE---EEEEEE
+ EEE--------EEEE---EEEEEE
  eee---------eee----eeeeee
  eee---------eeee---eeeeee
-" |  hm bed toy - | splicing.exon - 
+" |  hm bed toy - | splicing.exon - tmp.out -s 
 }
 
 splicing.count_exon(){
