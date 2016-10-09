@@ -25,6 +25,15 @@ REF="
 http://davetang.org/wiki/tiki-index.php?page=SAM
 "
 
+sam.bam(){
+usage="$FUNCNAME <in.sam> <out.bam>"
+if [ $# -lt 2 ];then echo "$usage"; return; fi
+        INPUT=$1; OUTPUT=`hm util mkout $2 .bam`; 
+        samtools view -h $INPUT | samtools view -b - \
+        | samtools sort - -T $OUTPUT.tmp > $OUTPUT
+        samtools index $OUTPUT  
+}
+
 sam.variants(){
 usage="$FUNCNAME <sam>
 "
