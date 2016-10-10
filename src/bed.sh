@@ -1,4 +1,7 @@
 
+bed.sort(){
+	sort -k1,1 -k2,3n
+}
 bed.toy(){
 usage="$FUNCNAME <intput.txt>"
 if [ $# -lt 1 ];then echo "$usage"; return; fi
