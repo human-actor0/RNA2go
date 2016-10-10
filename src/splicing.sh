@@ -6,7 +6,7 @@ FUNCTION:
 	Exons are sorted by their 5 prime occurrence.
 	Suffix added (e.g., genename.exon#.sub ).
 USAGE: 
-	$FUNCNAME <bed12> <output> [options]
+	$FUNCNAME <bed12> 
 "
 if [ $# -lt 1 ];then echo "$usage"; return; fi
 	hm bed exon $1 \
