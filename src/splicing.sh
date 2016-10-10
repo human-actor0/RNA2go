@@ -10,44 +10,36 @@ USAGE:
 "
 if [ $# -lt 1 ];then echo "$usage"; return; fi
 	hm bed exon $1 \
+	| sort -u \
 	| awk '{ print $1"@"$4"@"$6"\t"$2"\t"$3;}' \
 	| hm bed sort \
-	| mergeBed -i stdin
-
-	return
-	cat $1 | perl -e 'use strict; my %res=();
-	while(<STDIN>){ chomp;my @a=split/\t/,$_;
-		my @sizes=split/,/,$a[10];	
-		my @starts=split/,/,$a[11];	
-		my $n=$a[9];
-		for( my $i=0; $i<$n; $i++){
-			my $id=$a[0]."\t".$a[3]."\t".$a[5];
-			my $s= $a[1] + $starts[$i];
-			my $e= $s + $sizes[$i];
-			if( $a[5] eq "+"){
-				$res{$id}{$s}{$e} ++; 
-			}else{
-				$res{$id}{-$e}{-$s} ++; 
-			}
+	| mergeBed -i stdin -c 2,3 -o collapse,collapse \
+	| perl -e 'use strict; 
+	my %res=(); 
+	while(<STDIN>){chomp; my @a=split/\t/,$_;
+		my ($chrom,$name,$strand)=split /@/,$a[0];
+		if($strand eq "+"){
+			$res{$a[0]}{$a[1]}=$a[3]."\t".$a[4];
+		}else{
+			$res{$a[0]}{-$a[2]}=$a[3]."\t".$a[4];
 		}
 	}
-	foreach my $id (keys %res){
-		my ($chr,$gene,$strand) = split /\t/,$id;
+	foreach my $k (keys %res){
 		my $i=0;
-		foreach my $s (sort {$a<=>$b} keys %{$res{$id}}){ my $j=0;
-			foreach my $e (sort {$a<=>$b} keys %{$res{$id}{$s}}){ my $n="$gene.E$i.$j";
-				if($strand eq "+"){
-					print $chr,"\t",$s,"\t",$e,"\t",$n,"\t0\t$strand\n";	
-				}else{
-					print $chr,"\t",-$e,"\t",-$s,"\t",$n,"\t0\t$strand\n";	
-				}
-				$j++;
+		my ($chrom,$name,$strand)=split /@/,$k;
+		foreach my $s (sort {$a<=>$b} keys %{$res{$k}}){
+			my ($starts_str,$ends_str)=split/\t/,$res{$k}{$s};
+			my @starts=split/,/,$starts_str;
+			my @ends=split/,/,$ends_str;
+			foreach my $j ( 0..$#starts){
+				print $chrom,"\t",$starts[$j],"\t",$ends[$j],"\t",$name,"\t","E$i.$j\t$strand\n";
 			}
 			$i++;
 		}
 	}
-		
+	
 	'
+
 }
 splicing.exon.test(){
 echo "
