@@ -91,6 +91,7 @@ if [ $# -lt 1 ];then echo "$usage"; return; fi
 	local tmp=${2:-"tmp"};
 	awk -v OFS="\t" '{ $4="j"; $5=1;}1' $1 \
 	| hm bed intron - \
+	| hm bed flank - 1 1 \
 	| hm bed sum - 
 }
 
