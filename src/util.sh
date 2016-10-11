@@ -1,3 +1,5 @@
+
+
 util.split(){
 usage="$FUNCNAME <file> <by_nlines> <out> 
 "
@@ -33,6 +35,15 @@ util.mkdir(){
                 mkdir -p ${1%/*}
 	fi
 }
+util.mkout(){
+	local res=$1;
+        if [ ! -z ${1##*${2}} ];then 
+                res=$res$2; 
+        fi   
+	util.mkdir $res
+	echo "$res"
+}
+
 util.mktempd(){
 	mktemp -d 2>/dev/null || mktemp -d -t 'hmtmpdir'
 }

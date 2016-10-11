@@ -1,4 +1,82 @@
+splicing.event_a2f(){
+usage="$FUNCNAME <exon.bed> <jc.bed> [options]"
+if [ $# -lt 2 ];then echo "$usage"; return; fi
+	perl -e 'use strict; my $opt="'${@:3}'"; 
+	my ($f1, $f2) = ("'$1'","'$2'");
 
+	## read exons
+	my %E=();
+	open(my $fh,"<",$f1) or die "$!: $f1";
+	while(<$fh>){chomp; my @a=split/\t/,$_;
+		my $k=join("@",@a[0..5]);
+		$E{$a[1]}{$k}=$a[5];
+		$E{$a[2]-1}{$k}=$a[5];
+	}
+	close($fh);
+
+	## read junctions
+	my %J=();  my %JE=();
+	open(my $fh,"<",$f2) or die "$!: $f2";
+	while(<$fh>){chomp; my @a=split/\t/,$_;
+		my ($l,$r)=($a[1],$a[2]-1);
+		$J{$a[5]}{$l}{$r} += $a[4];
+		if( defined $E{$l} && defined $E{$r}}){
+			foreach my $e1 (keys %{$E{$l}}){
+			foreach my $e2 (keys %{$E{$r}}){
+				my $e1s= $E{$l}{$e1};
+				my $e2s= $E{$r}{$e2};
+			}}	
+		}
+	}
+	close($fh);
+
+	foreach my $s (keys %J){
+	foreach my $i (keys %{$J{$s}}){
+	foreach my $j (keys %{$J{$s}{$i}}){
+		next if (!defined $E{$i} || !defined $E{$j} );
+		my $c=$J{$s}{$i}{$j};
+
+		foreach my $ei (keys %{$E{$i}}){
+		my $eis= $E{$i}{$ei};
+		foreach my $ej (keys %{$E{$j}}){
+			my $ejs= $E{$j}{$ej};
+			my $hit=0;
+			if( $opt =~ /-S/){
+				if( $s ne $eis && $s ne $ejs){ $hit=1;}
+			}elsif( $opt =~/-s/){
+				if( $s eq $eis && $s eq $ejs){ $hit=1;}
+			}else{
+				$hit=1;
+			}
+			if($hit){
+				print $ei,"\t",$ej,"\t",$c,"\n";
+			}
+		}}
+	}}}	
+	'
+}
+splicing.event_a2f.test(){
+echo \
+"0123456789012345678901234567890123456789
+    JJJJ-------------JJJ
+                           J--------JJJJJ
+                          JJ--------JJJJJ
+                          JJ-------JJJJJ
+      jj----------------------------jj
+                     AAAAAAA
+    BBBB                             
+                                    CCCC
+" | hm bed toy - > tmp.i
+grep -i J tmp.i | hm splicing count_jc - > tmp.j
+grep -v J tmp.i | cut -f1-6 > tmp.e
+echo "all";
+splicing.event_a2f tmp.e tmp.j
+echo "-s";
+splicing.event_a2f tmp.e tmp.j -s
+echo "-S";
+splicing.event_a2f tmp.e tmp.j -S
+rm tmp.*
+}
 splicing.exon(){
 usage="
 FUNCTION:
@@ -32,7 +110,7 @@ if [ $# -lt 1 ];then echo "$usage"; return; fi
 			my @starts=split/,/,$starts_str;
 			my @ends=split/,/,$ends_str;
 			foreach my $j ( 0..$#starts){
-				print $chrom,"\t",$starts[$j],"\t",$ends[$j],"\t",$name,"\t","E$i.$j\t$strand\n";
+				print $chrom,"\t",$starts[$j],"\t",$ends[$j],"\t",$name,":","E$i.$j\t0\t$strand\n";
 			}
 			$i++;
 		}
@@ -51,10 +129,40 @@ echo "
  eee---------eeee---eeeeee
 " |  hm bed toy - | splicing.exon - tmp.out -s 
 }
+splicing.count_boundary(){
+usage="
+$FUNCNAME <bed> <bed> [options]
+"
+if [ $# -lt 2 ];then echo "$usage"; return; fi
+	intersectBed -a ${1:-stdin} -b ${2:-stdin} -wa -wb ${@:3} \
+	| awk -v OFS="@" '{
+		l=0;r=0;
+		if( $2 > $8 ){ l=1;}
+		if( $3 < $9 ){ r=1;}
+		print $1,$2,$3,$4,$5,$6"\t"l"\t"r;
+	}' | hm stat sum -  | tr "@" "\t"
+}
 
+splicing.count_boundary.test(){
+echo \
+"01234567890123456789012345678901234567890123456789
+        EEEEEE
+   RRRRR
+     RRRR
+         RRRRR
+             RRRRR
+              RRRRR
+         rrrrrr
+" | hm bed toy - | awk '$4!=0' | cut -f1-6 > tmp.i
+grep E tmp.i > tmp.e
+grep -v E tmp.i > tmp.r
+head tmp.*
+	splicing.count_boundary tmp.e tmp.r -s
+rm tmp.*
+}
 splicing.count_intersect(){
 usage="
-FUNCTION: count number of contiguous reads overlapping with exons
+FUNCTION: count number of contiguous reads (total, left crossing, right crossing)
 USAGE: $FUNCNAME <target.bed> <read.bed> [options]
 OPTIONS:
 	-s : count reads on the same strand
@@ -62,8 +170,16 @@ OPTIONS:
 "
 if [ $# -lt 2 ];then echo "$usage"; return; fi
 	awk 'NF <= 6 || $10==1' $2 \
-	| intersectBed -a ${1/-/stdin} -b stdin -wa -c ${@:3} \
-	| awk '$7 > 0'
+	| intersectBed -a ${1/-/stdin} -b stdin -wa -wb ${@:3} \
+	| awk -v OFS="@" '{
+		l=0;r=0;
+		if( $2 > $8 ){ l=1;}
+		if( $3 < $9 ){ r=1;}
+		print $1,$2,$3,$4,$5,$6"\t1\t"l"\t"r;
+	}' | hm stat sum - | tr "@" "\t"  \
+	| awk -v OFS="\t" '{
+		print $1,$2,$3,$4,$7","$8","$9,$6;
+	}'
 }
 splicing.count_intersect.test(){
 echo \
@@ -71,21 +187,20 @@ echo \
       AAAAAAA
         BBBBBBB
             CCCCCCCCCCCC
-" | hm bed toy - | cut -f1-6 > tmp.t
-echo \
-"01234567890123456789012345678901234567890123456789
     RRRR
      RRRRRR
         RRRRRRR-RRRRR
         RRRR
              rr
                  rrrrrr
-" | hm bed toy -  > tmp.r
-	splicing.count_intersect tmp.t tmp.r -s
+" | hm bed toy - | tail -n+2 > tmp.i
+awk 'toupper($4)=="R"' tmp.i | cut -f1-6 > tmp.r
+awk 'toupper($4)!="R"' tmp.i | cut -f1-6 > tmp.e
+	splicing.count_intersect tmp.e tmp.r -s
 rm tmp.*
 }
 
-splicing.jc(){
+splicing.count_jc(){
 usage="$FUNCNAME <bed12>" 
 if [ $# -lt 1 ];then echo "$usage"; return; fi
 	local tmp=${2:-"tmp"};
