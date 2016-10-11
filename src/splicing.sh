@@ -52,7 +52,7 @@ echo "
 " |  hm bed toy - | splicing.exon - tmp.out -s 
 }
 
-splicing.count_exon(){
+splicing.count_intersect(){
 usage="
 FUNCTION: count number of contiguous reads overlapping with exons
 USAGE: $FUNCNAME <target.bed> <read.bed> [options]
@@ -65,7 +65,7 @@ if [ $# -lt 2 ];then echo "$usage"; return; fi
 	| intersectBed -a ${1/-/stdin} -b stdin -wa -c ${@:3} \
 	| awk '$7 > 0'
 }
-splicing.count_exon.test(){
+splicing.count_intersect.test(){
 echo \
 "01234567890123456789012345678901234567890123456789
       AAAAAAA
@@ -81,7 +81,7 @@ echo \
              rr
                  rrrrrr
 " | hm bed toy -  > tmp.r
-	splicing.count_exon tmp.t tmp.r -s
+	splicing.count_intersect tmp.t tmp.r -s
 rm tmp.*
 }
 
