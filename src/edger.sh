@@ -106,29 +106,30 @@ c	3	30	NA	33	30	33	30" | edger.interact - ctr trt c2 c1 out
 }
 
 
-
-
 edger.norep(){
-if [ $# -lt 2 ];then
-	echo \
-"USAGE $FUNCNAME <txt> <BCV> [<header>]
-	<BCV>: 0.4: human data, 0.1: genetically identical, 0.01: technical replicates (edgeRUsersGuide)
+usage="USAGE $FUNCNAME <nput> <BCV> <output> 
+	<BCV>: 	0.4: human data, 
+		0.1: genetically identical, 
+		0.01: technical replicates (edgeRUsersGuide)
 "
-return;
-fi
-	cat $1 | hm util run_R 'H='${3:-"F"}';
+if [ $# -lt 3 ];then echo "$usage";return; fi
+	cmd='O="'$3'";
 		library(edgeR);
-		tt=read.table("stdin",header=H);
-		if(!H){ colnames(tt)=c("ID","CTR","TRT");}
+		tt=read.table("'$1'",header=T);
 		bcv = '$2';
 		y = DGEList(counts=tt[,2:3],group=c(1,2))
 		y = calcNormFactors(y);
 		et = exactTest(y, dispersion=bcv^2)	
-		write.table(file="stdout",cbind(tt,et$table),quote=F,sep="\t",row.names=F);
+		write.table(file=O,cbind(tt,et$table),quote=F,sep="\t",row.names=F,col.names=T);
 	'
+	echo "$cmd" | R --no-save
 }
 edger.norep.test(){
 echo \
-"a	2	3
-b	4	19" | edger.norep - 0.2
+"id	A	B
+a	2	3
+b	4	19" > tmp.in
+edger.norep tmp.in 0.2 tmp.out
+cat tmp.out
+rm tmp.*
 }
