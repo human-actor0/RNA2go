@@ -1,63 +1,102 @@
-splicing.event_a2f(){
-usage="$FUNCNAME <exon.bed> <jc.bed> [options]"
+splicing.list_events(){
+echo "
+          _____a_____ 
+        __b__     __c__
+    ------[         ]--------
+         d/         \e  
+    \          f         /
+"
+}
+
+splicing.event_d2f(){
+usage="
+$FUNCNAME <exon.bed> <jc.bed> [options]
+"
 if [ $# -lt 2 ];then echo "$usage"; return; fi
 	perl -e 'use strict; my $opt="'${@:3}'"; 
 	my ($f1, $f2) = ("'$1'","'$2'");
-
-	## read exons
-	my %E=();
-	open(my $fh,"<",$f1) or die "$!: $f1";
-	while(<$fh>){chomp; my @a=split/\t/,$_;
-		my $k=join("@",@a[0..5]);
-		$E{$a[1]}{$k}=$a[5];
-		$E{$a[2]-1}{$k}=$a[5];
+	
+	sub sw{
+		my ($s)=@_;
+		my $res=$s; $res=~tr/+-/-+/;
+		return $res;
 	}
-	close($fh);
 
 	## read junctions
 	my %J=();  my %JE=();
 	open(my $fh,"<",$f2) or die "$!: $f2";
 	while(<$fh>){chomp; my @a=split/\t/,$_;
 		my ($l,$r)=($a[1],$a[2]-1);
-		$J{$a[5]}{$l}{$r} += $a[4];
-		if( defined $E{$l} && defined $E{$r}}){
-			foreach my $e1 (keys %{$E{$l}}){
-			foreach my $e2 (keys %{$E{$r}}){
-				my $e1s= $E{$l}{$e1};
-				my $e2s= $E{$r}{$e2};
-			}}	
+		if(!( $opt=~/-S/) ){
+			$J{$a[5]}{$a[0]}{$l}{$r} += $a[4];
+			$J{$a[5]}{$a[0]}{$r}{$l} += $a[4];
+		}
+		if(!( $opt=~/-s/) ){
+			$J{sw($a[5])}{$a[0]}{$l}{$r} += $a[4];
+			$J{sw($a[5])}{$a[0]}{$r}{$l} += $a[4];
 		}
 	}
 	close($fh);
 
-	foreach my $s (keys %J){
-	foreach my $i (keys %{$J{$s}}){
-	foreach my $j (keys %{$J{$s}{$i}}){
-		next if (!defined $E{$i} || !defined $E{$j} );
-		my $c=$J{$s}{$i}{$j};
+	#foreach my $s (keys %J){
+	#foreach my $c (keys %{$J{$s}}){
+	#foreach my $l (keys %{$J{$s}{$c}}){
+	#foreach my $r (keys %{$J{$s}{$c}{$l}}){
+	#	print $s," ",$c," ",$l," ",$r," ",$J{$s}{$c}{$l}{$r},"\n";	
+	#}}}}
 
-		foreach my $ei (keys %{$E{$i}}){
-		my $eis= $E{$i}{$ei};
-		foreach my $ej (keys %{$E{$j}}){
-			my $ejs= $E{$j}{$ej};
-			my $hit=0;
-			if( $opt =~ /-S/){
-				if( $s ne $eis && $s ne $ejs){ $hit=1;}
-			}elsif( $opt =~/-s/){
-				if( $s eq $eis && $s eq $ejs){ $hit=1;}
-			}else{
-				$hit=1;
-			}
-			if($hit){
-				print $ei,"\t",$ej,"\t",$c,"\n";
+	## read exons
+	my %E=();
+	open(my $fh,"<",$f1) or die "$!: $f1";
+	while(<$fh>){chomp; my @a=split/\t/,$_;
+		my $k=join("@",@a[0..5]);
+		$E{$a[5]}{$a[0]}{l}{$a[1]}{$k}=$a[2]-1;
+		$E{$a[5]}{$a[0]}{r}{$a[2]-1}{$k}=$a[1];
+	}
+	close($fh);
+
+	##[    x]-----[l   r]----[y    ]
+	my %E2=(); # exon-exon interaction
+	foreach my $s (keys %E){ 
+	foreach my $c (keys %{$E{$s}}){
+	foreach my $l (keys %{$E{$s}{$c}{l}}){
+	foreach my $e (keys %{$E{$s}{$c}{l}{$l}}){
+		my $r=$E{$s}{$c}{l}{$l}{$e};
+		my ($lc,$rc)=(0,0);
+		my %xs=();
+		my %ys=();
+		if( defined $J{$s}{$c}{$l} ){ 
+		foreach my $x (keys %{$J{$s}{$c}{$l}}){	
+			if( defined $E{$s}{$c}{r}{$x} ){
+				$lc+=$J{$s}{$c}{$x}{$l};
+				$xs{$x}++;
 			}
 		}}
-	}}}	
+		if( defined $J{$s}{$c}{$r} ){ 
+		foreach my $y (keys %{$J{$s}{$c}{$r}}){	
+			if( defined $E{$s}{$c}{l}{$y} ){
+				$rc+=$J{$s}{$c}{$r}{$y};
+				$ys{$y}++;
+			}
+		}}
+		my $f=0;
+		foreach my $x (keys %xs){
+		foreach my $y (keys %ys){
+		if( defined $E{$s}{$c}{r}{$x} && defined $E{$s}{$c}{l}{$y} ){
+			$f += $J{$s}{$c}{$x}{$y}; 
+			
+		}}}
+		my @b=split/@/,$e;
+		$b[4] .= ",$lc,$rc,$f";
+		print join ("\t",@b),"\n";
+	}}}}
+
 	'
 }
-splicing.event_a2f.test(){
+splicing.event_d2f.test(){
 echo \
-"0123456789012345678901234567890123456789
+"
+0123456789012345678901234567890123456789
     JJJJ-------------JJJ
                            J--------JJJJJ
                           JJ--------JJJJJ
@@ -66,15 +105,17 @@ echo \
                      AAAAAAA
     BBBB                             
                                     CCCC
+
 " | hm bed toy - > tmp.i
-grep -i J tmp.i | hm splicing count_jc - > tmp.j
-grep -v J tmp.i | cut -f1-6 > tmp.e
+tail -n+2 tmp.i | awk 'toupper($4)=="J"' | hm splicing count_jc - > tmp.j
+tail -n+2 tmp.i | awk 'toupper($4)!="J"' | cut -f1-6 > tmp.e
+
 echo "all";
-splicing.event_a2f tmp.e tmp.j
+splicing.event_d2f tmp.e tmp.j
 echo "-s";
-splicing.event_a2f tmp.e tmp.j -s
+splicing.event_d2f tmp.e tmp.j -s
 echo "-S";
-splicing.event_a2f tmp.e tmp.j -S
+splicing.event_d2f tmp.e tmp.j -S
 rm tmp.*
 }
 splicing.exon(){
@@ -160,7 +201,7 @@ head tmp.*
 	splicing.count_boundary tmp.e tmp.r -s
 rm tmp.*
 }
-splicing.count_intersect(){
+splicing.event_a2c(){
 usage="
 FUNCTION: count number of contiguous reads (total, left crossing, right crossing)
 USAGE: $FUNCNAME <target.bed> <read.bed> [options]
@@ -181,7 +222,7 @@ if [ $# -lt 2 ];then echo "$usage"; return; fi
 		print $1,$2,$3,$4,$7","$8","$9,$6;
 	}'
 }
-splicing.count_intersect.test(){
+splicing.event_a2c.test(){
 echo \
 "01234567890123456789012345678901234567890123456789
       AAAAAAA
@@ -196,7 +237,7 @@ echo \
 " | hm bed toy - | tail -n+2 > tmp.i
 awk 'toupper($4)=="R"' tmp.i | cut -f1-6 > tmp.r
 awk 'toupper($4)!="R"' tmp.i | cut -f1-6 > tmp.e
-	splicing.count_intersect tmp.e tmp.r -s
+	splicing.event_a2c tmp.e tmp.r -s
 rm tmp.*
 }
 
