@@ -1,3 +1,5 @@
+
+
 splicing.list_events(){
 echo "
           _____a_____ 
@@ -8,7 +10,81 @@ echo "
 "
 }
 
-splicing.event_d2f(){
+splicing.psi(){
+usage="$FUNCNAME <a2j> [<a2j> ..]"
+if [ $# -lt 1 ];then echo "$usage";return; fi
+cmd='use strict;
+	my $tmp="'$@'"; 
+	my @files=split/\s+/,$tmp;
+	my %res=();
+	my $i=0;
+	my $nc=0;
+	sub psi{
+		my (@a)=@_;
+		my $num=$a[0] + $a[3] + $a[4];
+		my $den=$a[5];
+		my $res="NaN";
+		if( $num + $den > 0){ 
+			$res=sprintf("%.4f",$num/($den + $num));
+		}
+		return( int($num+$den+0.5)."\t".$res) ;
+	}
+	foreach my $f (@files){
+		my $fh=*STDIN;
+		if( $f ne "-"){
+			open($fh, "<", $f) or die  "$! $f";
+		}
+		while(<$fh>){chomp; my @a=split/\t/,$_;
+			my @s=split/,/,$a[4]; $a[4]=0; 
+			my $k=join("\t",@a[0..5]);
+			if( defined $res{$k}{$i}){
+				for(my $j=0; $j<=$#s; $j++){
+					$res{$k}{$i}[$j] += $s[$j];
+				}
+			}else{
+				$res{ $k }{$i}=\@s;
+				$nc=scalar @s;
+			}
+			my $v = $res{$k}{$i}[0] - $res{$k}{$i}[1] - $res{$k}{$i}[2];
+			$res{$k}{$i}[0] = $v/($a[2]-$a[1]);
+			print join( ",",@{$res{$k}{$i}}),"\n";
+		
+		}
+		close($fh);
+		$i++;
+	}
+	my $n=$i;
+	my $null = join(",", (0) x $nc);
+	print "chrom\tstart\tend\tgene\tscore\tstrand";
+	for(my $j=0; $j<$n; $j++){
+		print "\tf$j.sup\tf$j.psi";
+	}
+	print "\n";
+	foreach my $k (keys %res){
+		my @a=split/\t/,$k;
+		print $k;
+		for(my $i=0;$i<$n; $i++){
+			my $psi=psi(@{$res{$k}{$i}});
+			print "\t$psi";
+
+		}
+		print "\n";
+	}
+'
+echo "$cmd" | perl 
+}
+splicing.psi.test(){
+echo \
+"chr1	1	2	n1	7,2,3,4,5,6	+
+chr1	3	5	n1	7,2,3,4,5,6	+
+chr1	1	2	n2	7,2,3,4,5,6	+" > tmp.a 
+echo \
+"chr1	1	2	n1	7,2,3,4,5,6	+
+chr1	3	4	n3	7,2,3,4,5,6	+" > tmp.b
+splicing.psi tmp.a tmp.b
+rm tmp.a
+}
+splicing.count_def(){
 usage="
 $FUNCNAME <exon.bed> <jc.bed> [options]
 "
@@ -93,7 +169,7 @@ if [ $# -lt 2 ];then echo "$usage"; return; fi
 
 	'
 }
-splicing.event_d2f.test(){
+splicing.count_def.test(){
 echo \
 "
 0123456789012345678901234567890123456789
@@ -111,13 +187,14 @@ tail -n+2 tmp.i | awk 'toupper($4)=="J"' | hm splicing count_jc - > tmp.j
 tail -n+2 tmp.i | awk 'toupper($4)!="J"' | cut -f1-6 > tmp.e
 
 echo "all";
-splicing.event_d2f tmp.e tmp.j
+splicing.count_def tmp.e tmp.j
 echo "-s";
-splicing.event_d2f tmp.e tmp.j -s
+splicing.count_def tmp.e tmp.j -s
 echo "-S";
-splicing.event_d2f tmp.e tmp.j -S
+splicing.count_def tmp.e tmp.j -S
 rm tmp.*
 }
+
 splicing.exon(){
 usage="
 FUNCTION:
@@ -201,7 +278,7 @@ head tmp.*
 	splicing.count_boundary tmp.e tmp.r -s
 rm tmp.*
 }
-splicing.event_a2c(){
+splicing.count_abc(){
 usage="
 FUNCTION: count number of contiguous reads (total, left crossing, right crossing)
 USAGE: $FUNCNAME <target.bed> <read.bed> [options]
@@ -213,22 +290,22 @@ if [ $# -lt 2 ];then echo "$usage"; return; fi
 	awk 'NF <= 6 || $10==1' $2 \
 	| intersectBed -a ${1/-/stdin} -b stdin -wa -wb ${@:3} \
 	| awk -v OFS="@" '{
-		l=0;r=0;
+		c=0;l=0;r=0;
 		if( $2 > $8 ){ l=1;}
 		if( $3 < $9 ){ r=1;}
-		print $1,$2,$3,$4,$5,$6"\t1\t"l"\t"r;
+		if( $2 <= $8 && $3 >= $9){ c=1;}
+		print $1,$2,$3,$4,$5,$6"\t"c"\t"l"\t"r;
 	}' | hm stat sum - | tr "@" "\t"  \
 	| awk -v OFS="\t" '{
 		print $1,$2,$3,$4,$7","$8","$9,$6;
 	}'
 }
-splicing.event_a2c.test(){
+splicing.count_abc.test(){
 echo \
 "01234567890123456789012345678901234567890123456789
       AAAAAAA
-        BBBBBBB
-            CCCCCCCCCCCC
     RRRR
+      RRRRRR
      RRRRRR
         RRRRRRR-RRRRR
         RRRR
@@ -237,7 +314,7 @@ echo \
 " | hm bed toy - | tail -n+2 > tmp.i
 awk 'toupper($4)=="R"' tmp.i | cut -f1-6 > tmp.r
 awk 'toupper($4)!="R"' tmp.i | cut -f1-6 > tmp.e
-	splicing.event_a2c tmp.e tmp.r -s
+	splicing.count_abc tmp.e tmp.r -s
 rm tmp.*
 }
 
