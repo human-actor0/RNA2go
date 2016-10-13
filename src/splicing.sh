@@ -9,8 +9,118 @@ echo "
     \          f         /
 "
 }
+splicing.graph(){
+usage="
+$FUNCNAME <exon.bed>
+"
+if [ $# -lt 1 ]; then echo "$usage";exit; fi
+	hm bed sort $1 | mergeBed -i stdin -d -1 -s -c 2,3,4,5 -o collapse,collapse,distinct,distinct \
+	| perl -ne ' chomp; my @a=split /\t/,$_; 
+		#print join("\t",@a),"\n";
+		my %h=();
+		my @s=split/,/,$a[4];
+		my @e=split/,/,$a[5];
+		if( scalar @s < 2 && scalar @e < 2){
+			print $a[0],"\t",$a[1],"\t",$a[2],"\t",$a[6],"\t",$a[7],"\t",$a[3],"\n";
+			next;
+		}
+		for( my $i=0;$i<=$#s; $i++){
+			$h{$s[$i]}=0;
+			$h{$e[$i]-1}=1;
+		}
+		my @k=sort {$a<=>$b} keys %h;
+		for( my $i=0; $i<$#k; $i++){
+			my $s= $k[$i] + $h{ $k[$i] };
+			my $e= $k[$i+1] + $h{ $k[$i+1] };
+			print $a[0],"\t$s\t$e\t",$a[6],"\t",$a[7],"\t",$a[3],"\n";
+		}
+
+	' 
+}
+splicing.graph.test(){
+echo \
+"
+0123456789012345678901234567890123456789
+   EEEEEE
+ EEEEE
+ EEEEEEEEEEEEEEE 
+        EEEEEEEEE
+"| hm bed toy - \
+| cut -f1-6 \
+| splicing.graph -
+}
+splicing.a2f_to_table(){
+usage="
+$FUNCNAME <cmd> <a2f> [<a2f>]
+ <cmd> :
+	a : count a per entry
+	
+"
+if [ $# -lt 2 ];then echo "$usage"; return; fi
+cmd='use strict;
+	my $cmd="'$1'"; my $tmp="'${@:2}'"; 
+	my $L=50;
+	my @files=split/\s+/,$tmp;
+	my %res=();
+	my $i=0; my $nc=0;
+	foreach my $f (@files){
+		open(my $fh, "<", $f) or die  "$! $f";
+		while(<$fh>){chomp; my @a=split/\t/,$_;
+			my @s=split/,/,$a[4]; $a[4]=0; 
+			my $k=join("\t",@a[0..5]);
+			if( defined $res{$k}{$i}){
+				for(my $j=0; $j<=$#s; $j++){
+					$res{$k}{$i}[$j] += $s[$j];
+				}
+			}else{
+				$res{ $k }{$i}=\@s;
+				$nc=scalar @s;
+			}
+		}
+		close($fh);
+		$i++;
+	}
+	
+	## print header
+	my $n=$i;
+	my $null = join(",", (0) x $nc);
+	for(my $i=0; $i< $n; $i++){
+		print "#f",$i,": ",$files[$i],"\n";
+	}
+	print "chrom\tstart\tend\tgene\tscore\tstrand";
+	for(my $j=0; $j<$n; $j++){
+		print "\tf$j.count";
+	}
+	print "\n";
+
+	foreach my $k (keys %res){
+		my @a=split/\t/,$k;
+		print $k;
+		for(my $i=0;$i<$n; $i++){
+			my $v= defined $res{$k}{$i}[0] ? $res{$k}{$i}[0] : 0;
+			print "\t$v";
+		}
+		print "\n";
+	}
+'
+echo "$cmd" | perl 
+
+}
+
+splicing.a2f_to_table.test(){
+echo \
+"chr1	1	2	n1	1,2,3,4,5,6	+
+chr1	3	5	n1	1,2,3,4,5,6	+
+chr1	1	2	n2	1,2,3,4,5,6	+" > tmp.a 
+echo \
+"chr1	1	2	n1	1,2,3,4,5,6	+
+chr1	3	4	n3	1,2,3,4,5,6	+" > tmp.b
+splicing.a2f_to_table a tmp.a tmp.b
+rm tmp.*
+}
 
 splicing.psi(){
+
 usage="$FUNCNAME <read_len> <a2j> [<a2j> ..]"
 if [ $# -lt 2 ];then echo "$usage";return; fi
 cmd='use strict;
@@ -31,10 +141,7 @@ cmd='use strict;
 		return( int($num+$den+0.5)."\t".$res) ;
 	}
 	foreach my $f (@files){
-		my $fh=*STDIN;
-		if( $f ne "-"){
-			open($fh, "<", $f) or die  "$! $f";
-		}
+		open(my $fh, "<", $f) or die  "$! $f";
 		while(<$fh>){chomp; my @a=split/\t/,$_;
 			my @s=split/,/,$a[4]; $a[4]=0; 
 			my $k=join("\t",@a[0..5]);
@@ -55,6 +162,9 @@ cmd='use strict;
 	}
 	my $n=$i;
 	my $null = join(",", (0) x $nc);
+	for(my $i=0; $i< $n; $i++){
+		print "#f",$i,": ",$files[$i],"\n";
+	}
 	print "chrom\tstart\tend\tgene\tscore\tstrand";
 	for(my $j=0; $j<$n; $j++){
 		print "\tf$j.sup\tf$j.psi";
@@ -81,8 +191,15 @@ chr1	1	2	n2	1,2,3,4,5,6	+" > tmp.a
 echo \
 "chr1	1	2	n1	1,2,3,4,5,6	+
 chr1	3	4	n3	1,2,3,4,5,6	+" > tmp.b
-splicing.psi 1 tmp.a tmp.b
-rm tmp.a
+echo \
+"chr1	53699213	53699324	ENSG00000162385:E2.1	0,8,8,1,4,1	-
+chr1	40030357	40030445	ENSG00000090621:E9.0	0,10,5,1,3,1	-
+chr1	154940679	154940733	ENSG00000160691:E6.0	0,4,5,2,1,1	-
+chr1	85724617	85724744	ENSG00000162642:E1.0	0,2,2,2,1,1	-
+chr1	94654392	94654497	ENSG00000137962:E15.0	0,7,18,23,8,1	-" > tmp.c
+
+splicing.psi 50 tmp.c
+rm tmp.*
 }
 splicing.count_def(){
 usage="
