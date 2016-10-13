@@ -158,10 +158,9 @@ if [ $# -lt 2 ];then echo "$usage"; return; fi
 		my $f=0;
 		foreach my $x (keys %xs){
 		foreach my $y (keys %ys){
-		if( defined $E{$s}{$c}{r}{$x} && defined $E{$s}{$c}{l}{$y} ){
-			$f += $J{$s}{$c}{$x}{$y}; 
+			$f += (defined $J{$s}{$c}{$x}{$y} ? $J{$s}{$c}{$x}{$y} : 0);
 			
-		}}}
+		}}
 		my @b=split/@/,$e;
 		$b[4] .= ",$lc,$rc,$f";
 		print join ("\t",@b),"\n";
@@ -179,6 +178,8 @@ echo \
                           JJ-------JJJJJ
       jj----------------------------jj
                      AAAAAAA
+      jj-------------jj
+                          jj--------jj
     BBBB                             
                                     CCCC
 
