@@ -11,10 +11,11 @@ echo "
 }
 
 splicing.psi(){
-usage="$FUNCNAME <a2j> [<a2j> ..]"
-if [ $# -lt 1 ];then echo "$usage";return; fi
+usage="$FUNCNAME <read_len> <a2j> [<a2j> ..]"
+if [ $# -lt 2 ];then echo "$usage";return; fi
 cmd='use strict;
-	my $tmp="'$@'"; 
+	my $L="'$1'";
+	my $tmp="'${@:2}'"; 
 	my @files=split/\s+/,$tmp;
 	my %res=();
 	my $i=0;
@@ -45,10 +46,9 @@ cmd='use strict;
 				$res{ $k }{$i}=\@s;
 				$nc=scalar @s;
 			}
-			my $v = $res{$k}{$i}[0] - $res{$k}{$i}[1] - $res{$k}{$i}[2];
-			$res{$k}{$i}[0] = $v/($a[2]-$a[1]);
-			print join( ",",@{$res{$k}{$i}}),"\n";
-		
+			if($a[2]-$a[1] > $L){
+				$res{$k}{$i}[0] *= $L/($a[2]-$a[1]-$L);
+			}
 		}
 		close($fh);
 		$i++;
@@ -75,13 +75,13 @@ echo "$cmd" | perl
 }
 splicing.psi.test(){
 echo \
-"chr1	1	2	n1	7,2,3,4,5,6	+
-chr1	3	5	n1	7,2,3,4,5,6	+
-chr1	1	2	n2	7,2,3,4,5,6	+" > tmp.a 
+"chr1	1	2	n1	1,2,3,4,5,6	+
+chr1	3	5	n1	1,2,3,4,5,6	+
+chr1	1	2	n2	1,2,3,4,5,6	+" > tmp.a 
 echo \
-"chr1	1	2	n1	7,2,3,4,5,6	+
-chr1	3	4	n3	7,2,3,4,5,6	+" > tmp.b
-splicing.psi tmp.a tmp.b
+"chr1	1	2	n1	1,2,3,4,5,6	+
+chr1	3	4	n3	1,2,3,4,5,6	+" > tmp.b
+splicing.psi 1 tmp.a tmp.b
 rm tmp.a
 }
 splicing.count_def(){
