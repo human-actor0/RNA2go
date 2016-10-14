@@ -32,7 +32,7 @@ cmd='use strict;
 		$fi++;
 	}
 	## print header
-	print map{$_."\n"} @files;
+	print map{"#".$_."\n"} @files;
 	print "chrom\tstart\tend\tgene\tscore\tstrand";
 	foreach my $t (keys %tags){
 		foreach my $j (0..($nc-1)){
