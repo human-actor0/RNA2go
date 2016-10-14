@@ -1,4 +1,76 @@
+bed.table(){
+usage="
+merge scores of bed files. consider comma delimited scores too. 
+$FUNCNAME <tag>:<bed> [<tag>:<bed>..]
+"
+if [ $# -lt 1 ];then echo "$usage"; return; fi
+cmd='use strict;
+	my $cmd="'$1'"; my $tmp="'${@}'"; 
+	my @files=split/\s+/,$tmp;
+	my %res=();
+	my $nc=0;
+	my %tags=();
+	my $fi=0;
+	foreach my $tf (@files){
+		my ($tag,$file)=split/:/,$tf;
+		if( ! defined $file){ $file=$tag; $tag="f".$fi;} 
+		$tags{$tag} ++;
+		open(my $fh, "<", $file) or die  "$! $file";
+		while(<$fh>){chomp; my @a=split/\t/,$_;
+			my @s=split/,/,$a[4]; $a[4]=0; 
+			my $k=join("\t",@a[0..5]);
+			if( defined $res{$k}{$tag}){
+				for(my $j=0; $j<=$#s; $j++){
+					$res{$k}{$tag}[$j] += $s[$j];
+				}
+			}else{
+				$res{ $k }{$tag}=\@s;
+				$nc=scalar @s;
+			}
+		}
+		close($fh);
+		$fi++;
+	}
+	## print header
+	print map{$_."\n"} @files;
+	print "chrom\tstart\tend\tgene\tscore\tstrand";
+	foreach my $t (keys %tags){
+		foreach my $j (0..($nc-1)){
+		print "\t$t.c$j";
+		}
+	}
+	print "\n";
 
+	## print cells
+	my $null = join("\t", (0) x $nc);
+	foreach my $k (keys %res){
+		my @a=split/\t/,$k;
+		print $k;
+		foreach my $t (keys %tags){
+			my $v=$null;
+			if(defined $res{$k}{$t}){
+				$v= join("\t",@{$res{$k}{$t}});
+			}
+			print "\t$v";
+		}
+		print "\n";
+	}
+'
+echo "$cmd" | perl 
+
+}
+
+bed.table.test(){
+echo \
+"chr1	1	2	n1	1,2	+
+chr1	3	5	n1	1,2	+
+chr1	1	2	n2	1,2	+" > tmp.a 
+echo \
+"chr1	1	2	n1	1,2	+
+chr1	3	4	n3	1,2	+" > tmp.b
+bed.table ctr:tmp.a ctr:tmp.a trt:tmp.b
+rm tmp.*
+}
 bed.sort(){
 	sort -k1,1 -k2,3n
 }
