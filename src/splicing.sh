@@ -1,5 +1,4 @@
 
-
 splicing.list_events(){
 echo "
           _____a_____ 
@@ -7,15 +6,67 @@ echo "
     ------[         ]--------
          d/         \e  
     \          f         /
+
+
+
+## pile:
+          >>>>> (5) 
+     >>>>>>>>(3) >>>>--------(4)
+    ------[         ]--------
 "
 }
-splicing.graph(){
+splicing.coverage(){
+usage="
+$FUNCNAME <flatexon.bed> <read.bed12> [options]
+"
+if [ $# -lt 2 ];then echo "$usage";return; fi
+	intersectBed -a $1 -b $2 -wa -wb ${@:3} \
+	| perl -e 'use strict;
+	sub min{ my ($x,$y)=@_; return ($x > $y ? $y : $x);}
+	sub max{ my ($x,$y)=@_; return ($x < $y ? $y : $x);}
+	my %res=();
+	while(<STDIN>){ chomp; my @a=split/\t/,$_;
+		my @l=split/,/,$a[$#a-1];
+		my @s=split/,/,$a[$#a];
+		my $v=0;
+		for(my $i=0; $i< $a[$#a-2];$i++){
+			my $start=$a[7]+$s[$i];
+			my $end=$start + $l[$i];
+			my $ms=max($a[1],$start);
+			my $me=min($a[2],$end);
+			if( $me - $ms > 0){ $v += $me-$ms; }
+		}
+		my $k=join("\t",@a[0..5]);
+		$res{$k} += $v;
+	}
+	foreach my $k (keys %res){
+		my @a=split /\t/,$k;
+		$a[4]=$res{$k};
+		print join("\t",@a),"\n";
+	}
+	'
+}
+
+splicing.coverage.test(){
+echo "
+012345678901234567890123456789
+        AAABBBCCC
+" | hm bed toy - | cut -f 1-6 > tmp.e
+echo "
+     RRRRRRRR
+         RR---RR
+" | hm bed toy - > tmp.r
+splicing.coverage tmp.e tmp.r
+rm tmp.*
+}
+
+splicing.flatexon(){
 usage="
 $FUNCNAME <gene.bed12>
 "
 if [ $# -lt 1 ]; then echo "$usage";exit; fi
-	hm bed exon $1 \
-	| awk -v OFS="\t" '{$1=$1":"$4":"$6;}1' \
+	cat $1 | awk -v OFS="\t" '{$1=$1":"$4":"$6;}1' \
+	| hm bed exon - \
 	| sort -u \
 	| hm bed sort | mergeBed -i stdin -d -1 -c 2,3, -o collapse,collapse \
 	| perl -e 'use strict; my %res=();
@@ -41,13 +92,15 @@ if [ $# -lt 1 ]; then echo "$usage";exit; fi
 			for( my $i=0; $i<$#k; $i++){
 				my $s= $k[$i] + $h{ $k[$i] };
 				my $e= $k[$i+1] + $h{ $k[$i+1] };
-				print $chrom,"\t",$s,"\t",$e,"\t",$gene,"\t0\t$strand\n";
+				if( $e > $s){
+					print $chrom,"\t",$s,"\t",$e,"\t",$gene,"\t0\t$strand\n";
+				}
 			}
 		}
 	}
 	' 
 }
-splicing.graph.test(){
+splicing.flatexon.test(){
 echo \
 "
 0123456789012345678901234567890123456789
@@ -56,9 +109,20 @@ echo \
  EEEEE
  EEEEEEEEEEEEEEE 
         EEEEEEEEE
-"| hm bed toy - \
-| cut -f1-6 \
-| splicing.graph -
+"| tail -n+3 | hm bed toy - \
+| splicing.flatexon -
+
+echo "chr1	1	3	E	0	+
+chr1	3	5	E	0	+
+chr1	5	8	E	0	+
+chr1	8	16	E	0	+
+chr1	16	17	E	0	+
+chr1	17	20	E	0	+
+chr1	20	22	E	0	+
+chr1	25	27	E	0	+
+chr1	27	31	E	0	+
+chr1	31	34	E	0	+" > tmp.res
+rm tmp.*
 }
 splicing.a2f_to_table(){
 usage="
