@@ -36,8 +36,10 @@ if [ $# -lt 2 ];then echo "$usage";return; fi
 			my $me=min($a[2],$end);
 			if( $me - $ms > 0){ $v += $me-$ms; }
 		}
+		if( $v > 0 ){
 		my $k=join("\t",@a[0..5]);
 		$res{$k} += $v;
+		}
 	}
 	foreach my $k (keys %res){
 		my @a=split /\t/,$k;
