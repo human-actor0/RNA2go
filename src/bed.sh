@@ -5,47 +5,54 @@ bed.sort(){
 bed.toy(){
 usage="$FUNCNAME <intput.txt>"
 if [ $# -lt 1 ];then echo "$usage"; return; fi
-cat $1 | perl -ne 'use strict; chomp; 
-	my @S=split//," ".$_." "; ## add pads for eacy calc.
-	my @sizes=(); my @starts=();
-	my $type="";
-	my $start=0;
-	for(my $i=1; $i< scalar @S; $i++){ 
-		my $a=$S[$i-1];
-		my $b=$S[$i];
-		my $p=$i-1; ## original position before the padding
-		if( ($a eq " " || $a eq "-") && $b =~ /[\w]/){
-			$type=$b;
-			if( $a eq " "){ $start=$p;}
-			push @starts,$p-$start;
-		}elsif($a =~ /[\w]/ && ($b eq " " || $b eq "-")){
-			push @sizes, $p - $starts[$#starts] - $start;
-		}
+cat $1 | perl -e 'use strict; 
+	sub f{
+		my ($s,$e,$g) = @_;
+		my $n=scalar @$s;
+		#print join(",",@$s)," ",join(",",@$e),"\n";
+		my $s0=$s->[0];		
+		my $e0=$e->[$n-1];		
+		my $st="+"; if( lc $g eq $g){ $st="-";}
+		print "chr1\t$s0\t$e0\t$g\t0\t$st\t$s0\t$e0\t0,0,0\t$n\t";
+		print join(",",map { $e->[$_] - $s->[$_]} (0..($n-1))),"\t";
+		print join(",",map { $_ - $s0 } @$s),"\n";
+
 	}
-	if( $type ne ""){
-		my $strand = $type eq uc $type ? "+" : "-";
-		my $end = $start + $starts[$#starts] + $sizes[$#sizes];
-		print join("\t",(
-			"chr1",
-			$start, $end,
-			$type, 0, $strand,
-			$start, $end,
-			"0,0,0",scalar @starts,
-			join(",",@sizes),join(",",@starts)
-		)),"\n";
+	while(<STDIN>){chomp;  my $tmp=" ".$_." "; $tmp=~s/\d/ /g;
+		my @S=split//,$tmp;
+		my @sizes=(); my @starts=(); my @ends=();
+		my $type="";
+		my $start=0;
+		for(my $i=1; $i< scalar @S; $i++){ 
+			my ($a,$b)=($S[$i-1],$S[$i]);
+			if($a eq " " && $b =~/\w/){
+				push @starts,$i-1;
+			}elsif($a =~/\w/ && $b eq " "){
+				push @ends,$i-1;
+				f(\@starts,\@ends,$a);
+				@starts=();@ends=();
+			}elsif($a eq "-" && $b =~/\w/){
+				push @starts,$i-1;
+			}elsif($a =~/\w/ && $b eq "-"){
+				push @ends,$i-1;
+			}elsif($a ne $b){
+				push @ends,$i-1;
+				f(\@starts,\@ends,$a);
+				@starts=();@ends=();
+				push @starts,$i-1;
+			} 
+		}
 	}
 '
 }
 
 bed.toy.test(){
 echo \
-"01234567890123456789012345678901234567890123456789
-ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC
- EEEE-------------EEEEEEEE------------EEEEEEEEEEEE
-  RRR-------------RR
-   rr-------------rrrrrr
-                RRRR 
-                                    RRRRR
+"
+01234567890123456789012345678901234567890123456789
+     AABBBCCCC
+  DDDDD-----DDDDD EEE-EEE
+  e-----e--------e
 " | bed.toy -
 }
 
