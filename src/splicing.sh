@@ -11,37 +11,48 @@ echo "
 }
 splicing.graph(){
 usage="
-$FUNCNAME <exon.bed>
+$FUNCNAME <gene.bed12>
 "
 if [ $# -lt 1 ]; then echo "$usage";exit; fi
-	hm bed sort $1 | mergeBed -i stdin -d -1 -s -c 2,3,4,5 -o collapse,collapse,distinct,distinct \
-	| perl -ne ' chomp; my @a=split /\t/,$_; 
-		#print join("\t",@a),"\n";
+	hm bed exon $1 \
+	| awk -v OFS="\t" '{$1=$1":"$4":"$6;}1' \
+	| sort -u \
+	| hm bed sort | mergeBed -i stdin -d -1 -c 2,3, -o collapse,collapse \
+	| perl -e 'use strict; my %res=();
+	sub f1{
+		my ($x,$y)=@_;
+		if($y eq "-"){ return -$x;}
+		return $x;
+	}
+	while(<STDIN>){ chomp; my @a=split /\t/,$_; 
+		my ($chrom,$gene,$strand)= split /:/,$a[0];
 		my %h=();
-		my @s=split/,/,$a[4];
-		my @e=split/,/,$a[5];
+		my @s=split/,/,$a[3];
+		my @e=split/,/,$a[4];
 		if( scalar @s < 2 && scalar @e < 2){
-			print $a[0],"\t",$a[1],"\t",$a[2],"\t",$a[6],"\t",$a[7],"\t",$a[3],"\n";
-			next;
-		}
-		for( my $i=0;$i<=$#s; $i++){
-			$h{$s[$i]}=0;
-			$h{$e[$i]-1}=1;
-		}
-		my @k=sort {$a<=>$b} keys %h;
-		for( my $i=0; $i<$#k; $i++){
-			my $s= $k[$i] + $h{ $k[$i] };
-			my $e= $k[$i+1] + $h{ $k[$i+1] };
-			print $a[0],"\t$s\t$e\t",$a[6],"\t",$a[7],"\t",$a[3],"\n";
-		}
+			print $chrom,"\t",$a[1],"\t",$a[2],"\t",$gene,"\t0\t$strand\n";
+		}else{
 
+			for( my $i=0;$i<=$#s; $i++){
+				$h{$s[$i]}=0;
+				$h{$e[$i]-1}=1;
+			}
+			my @k=sort {$a<=>$b} keys %h;
+			for( my $i=0; $i<$#k; $i++){
+				my $s= $k[$i] + $h{ $k[$i] };
+				my $e= $k[$i+1] + $h{ $k[$i+1] };
+				print $chrom,"\t",$s,"\t",$e,"\t",$gene,"\t0\t$strand\n";
+			}
+		}
+	}
 	' 
 }
 splicing.graph.test(){
 echo \
 "
 0123456789012345678901234567890123456789
-   EEEEEE
+   EEEEEE-------EEEEEE-----EEEEEEE
+     EEEE--------EEE-----EEEEEE
  EEEEE
  EEEEEEEEEEEEEEE 
         EEEEEEEEE
