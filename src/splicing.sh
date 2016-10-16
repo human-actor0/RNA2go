@@ -9,7 +9,7 @@ echo "
 
 
 
-## pile:
+## coverage :
           >>>>> (5) 
      >>>>>>>>(3) >>>>--------(4)
     ------[         ]--------
@@ -64,55 +64,57 @@ rm tmp.*
 
 splicing.flatexon(){
 usage="
-$FUNCNAME <gene.bed12>
+$FUNCNAME <gene.bed12> [options]
+ [options]:
+	-i : include introns
 "
 if [ $# -lt 1 ]; then echo "$usage";exit; fi
-	cat $1 | awk -v OFS="\t" '{$1=$1":"$4":"$6;}1' \
-	| hm bed exon - \
-	| sort -u \
-	| hm bed sort | mergeBed -i stdin -d -1 -c 2,3, -o collapse,collapse \
-	| perl -e 'use strict; my %res=();
-	sub f1{
-		my ($x,$y)=@_;
-		if($y eq "-"){ return -$x;}
-		return $x;
+	cat $1 | hm bed exon - | perl -e 'use strict; my %res=();
+	while(<STDIN>){chomp; my @a=split/\t/,$_;
+		my $k=$a[0]."\t".$a[3]."\t".$a[5];
+		$res{$k}{ $a[1] }{0} ++;
+		$res{$k}{ $a[2]-1 }{1} ++;
 	}
-	while(<STDIN>){ chomp; my @a=split /\t/,$_; 
-		my ($chrom,$gene,$strand)= split /:/,$a[0];
-		my %h=();
-		my @s=split/,/,$a[3];
-		my @e=split/,/,$a[4];
-		if( scalar @s < 2 && scalar @e < 2){
-			print $chrom,"\t",$a[1],"\t",$a[2],"\t",$gene,"\t0\t$strand\n";
-		}else{
-
-			for( my $i=0;$i<=$#s; $i++){
-				$h{$s[$i]}=0;
-				$h{$e[$i]-1}=1;
+	foreach my $k (keys %res){
+		my ($chrom,$gene,$strand)= split/\t/,$k;
+		my @x= sort {$a<=>$b} keys %{$res{$k}};
+		for(my $i=0; $i<$#x; $i++){
+			my $s=$x[$i]; my $e=$x[$i+1];
+			my $t="e"; ## exon 
+			if( defined $res{$k}{$s}{0} && defined $res{$k}{$s}{1}){
+				print join("\t",($chrom,$s,$s+1,$gene,$t,$strand)),"\n";
 			}
-			my @k=sort {$a<=>$b} keys %h;
-			for( my $i=0; $i<$#k; $i++){
-				my $s= $k[$i] + $h{ $k[$i] };
-				my $e= $k[$i+1] + $h{ $k[$i+1] };
-				if( $e > $s){
-					print $chrom,"\t",$s,"\t",$e,"\t",$gene,"\t0\t$strand\n";
+			if( defined $res{$k}{$e}{0} && defined $res{$k}{$e}{1}){
+				print join("\t",($chrom,$e,$e+1,$gene,$t,$strand)),"\n";
+			}
+			if( defined $res{$k}{$s}{1}){
+				$s++;
+				if( defined $res{$k}{$e}{1} ){
+					$e++;
+				}else{
+					$t="i";
+				}
+			}elsif( defined $res{$k}{$s}{0}){
+				if(defined $res{$k}{$e}{0}){
+				}else{
+					$e++;
 				}
 			}
+			print join("\t",($chrom,$s,$e,$gene,$t,$strand)),"\n";
 		}
 	}
-	' 
+	'
 }
 splicing.flatexon.test(){
 echo \
 "
 0123456789012345678901234567890123456789
    EEEEEE-------EEEEEE-----EEEEEEE
-     EEEE--------EEE-----EEEEEE
- EEEEE
- EEEEEEEEEEEEEEE 
-        EEEEEEEEE
-"| tail -n+3 | hm bed toy - \
-| splicing.flatexon -
+        E--------EEE-----EEE     E
+"> tmp.i 
+cat tmp.i
+cat tmp.i |  tail -n+3 | hm bed toy - \
+| splicing.flatexon - -i
 
 echo "chr1	1	3	E	0	+
 chr1	3	5	E	0	+
