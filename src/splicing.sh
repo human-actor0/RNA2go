@@ -64,9 +64,7 @@ rm tmp.*
 
 splicing.flatexon(){
 usage="
-$FUNCNAME <gene.bed12> [options]
- [options]:
-	-i : include introns
+$FUNCNAME <gene.bed12> 
 "
 if [ $# -lt 1 ]; then echo "$usage";exit; fi
 	cat $1 | hm bed exon - | perl -e 'use strict; my %res=();
