@@ -72,60 +72,47 @@ if [ $# -lt 1 ]; then echo "$usage";exit; fi
 	cat $1 | hm bed exon - | perl -e 'use strict; my %res=();
 	while(<STDIN>){chomp; my @a=split/\t/,$_;
 		my $k=$a[0]."\t".$a[3]."\t".$a[5];
-		$res{$k}{ $a[1] }{0} ++;
-		$res{$k}{ $a[2]-1 }{1} ++;
+		$res{$k}{ $a[1] }{1} ++;
+		$res{$k}{ $a[2]-1 }{2} ++;
 	}
 	foreach my $k (keys %res){
 		my ($chrom,$gene,$strand)= split/\t/,$k;
 		my @x= sort {$a<=>$b} keys %{$res{$k}};
+		my %h= ();
+		my %se=();
+		foreach my $xi (@x){
+			foreach my $xj (keys %{$res{$k}{$xi}}){
+				$h{$xi} += $xj;
+			}
+		}
 		for(my $i=0; $i<$#x; $i++){
-			my $s=$x[$i]; my $e=$x[$i+1];
-			my $t="e"; ## exon 
-			if( defined $res{$k}{$s}{0} && defined $res{$k}{$s}{1}){
-				print join("\t",($chrom,$s,$s+1,$gene,$t,$strand)),"\n";
-			}
-			if( defined $res{$k}{$e}{0} && defined $res{$k}{$e}{1}){
-				print join("\t",($chrom,$e,$e+1,$gene,$t,$strand)),"\n";
-			}
-			if( defined $res{$k}{$s}{1}){
-				$s++;
-				if( defined $res{$k}{$e}{1} ){
-					$e++;
-				}else{
-					$t="i";
-				}
-			}elsif( defined $res{$k}{$s}{0}){
-				if(defined $res{$k}{$e}{0}){
-				}else{
-					$e++;
-				}
-			}
-			print join("\t",($chrom,$s,$e,$gene,$t,$strand)),"\n";
+			my ($s,$e)=( $x[$i], $x[$i+1]);
+			my ($a,$b)=($h{$s},$h{$e});
+			my $t="E";
+			if( $a == 3){ $se{$s."\t".($s+1)."\t$gene\t$t"}=1; }
+			if( $b == 3){ $se{$e."\t".($e+1)."\t$gene\t$t"}=1; }
+			if( $a > 1){ $s++;}
+			if( $b== 2){ $e++;}
+			if( $a > 1  && $b !=2 ){ $t="I";}
+			$se{$s."\t".$e."\t$gene\t$t"}=1;
+		}
+		foreach my $x (keys %se){
+			print join("\t",($chrom,$x,$strand)),"\n";
 		}
 	}
-	'
+	' | hm bed sort -
 }
 splicing.flatexon.test(){
 echo \
 "
 0123456789012345678901234567890123456789
-   EEEEEE-------EEEEEE-----EEEEEEE
-        E--------EEE-----EEE     E
+   EEEEEE-----EEEEEEE----EE-E  EEEEE
+        EEEEEEE---------EEE-E  EE  
 "> tmp.i 
 cat tmp.i
 cat tmp.i |  tail -n+3 | hm bed toy - \
 | splicing.flatexon - -i
 
-echo "chr1	1	3	E	0	+
-chr1	3	5	E	0	+
-chr1	5	8	E	0	+
-chr1	8	16	E	0	+
-chr1	16	17	E	0	+
-chr1	17	20	E	0	+
-chr1	20	22	E	0	+
-chr1	25	27	E	0	+
-chr1	27	31	E	0	+
-chr1	31	34	E	0	+" > tmp.res
 rm tmp.*
 }
 splicing.a2f_to_table(){
