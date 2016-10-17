@@ -8,8 +8,9 @@ $FUNCNAME <tag>:<bed> [<tag>:<bed>..] [options]
 if [ $# -lt 1 ];then echo "$usage"; return; fi
 cmd='use strict;
 	my $cmd="'$1'"; my $tmp="'${@}'"; 
-	my %opts=map {$_=>1} $tmp=~/(-\w)/g; 
-	$tmp=~s/-\w//g; $tmp=~s/^\s+|\s+$//g;
+	my %opts=map {$_=>1} $tmp=~/\s(-\w)/g; 
+	$tmp=~s/^-\w//;$tmp=~s/\s-\w//g; $tmp=~s/^\s+|\s+$//g;
+	print $tmp,"\n";
 	my @files=split/\s+/,$tmp;
 	my %res=();
 	my %res_len=();
@@ -86,9 +87,9 @@ chr1	3	5	n1	1,2	+
 chr1	1	2	n2	1,2	+" > tmp.a 
 echo \
 "chr1	1	2	n1	1,2	+
-chr1	3	4	n3	1,2	+" > tmp.b
-bed.table ctr:tmp.a ctr:tmp.a trt:tmp.b
-bed.table -g ctr:tmp.a ctr:tmp.a trt:tmp.b
+chr1	3	4	n3	1,2	+" > tmp-1.b
+bed.table ctr:tmp.a ctr:tmp.a trt:tmp-1.b
+bed.table -g ctr:tmp.a ctr:tmp.a trt:tmp-1.b
 rm tmp.*
 }
 bed.sort(){
