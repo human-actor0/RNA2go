@@ -10,7 +10,6 @@ cmd='use strict;
 	my $cmd="'$1'"; my $tmp="'${@}'"; 
 	my %opts=map {$_=>1} $tmp=~/\s(-\w)/g; 
 	$tmp=~s/^-\w//;$tmp=~s/\s-\w//g; $tmp=~s/^\s+|\s+$//g;
-	print $tmp,"\n";
 	my @files=split/\s+/,$tmp;
 	my %res=();
 	my %res_len=();
