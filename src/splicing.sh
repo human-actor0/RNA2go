@@ -15,6 +15,7 @@ echo "
     ------[         ]--------
 "
 }
+
 splicing.coverage(){
 usage="
 $FUNCNAME <flatexon.bed> <read.bed12> [options]
@@ -854,71 +855,6 @@ chr1	200	400	n2	0	+	null	-4:1,-3:2,1:2,3:4" \
 | splicing.relpos_to_table  -
 }
 
-splicing.table(){
-usage="$FUNCNAME <ctr.ei>[,<ctr.ei..] <trt.ei>[,<trt.ei>] [options]
- [options]
-"
-if [ $# -ne 2 ];then echo "$usage"; return; fi
-perl -e 'use strict;
-	my $option="";
-	my @fctr=map{"$_"} split /,/,"'$1'";
-	my @ftrt=map{"$_"} split /,/,"'$2'";
-
-	sub readf{
-		my ($f,$r,$tag,$opt,$cols)=@_;
-		open(my $fh,"<",$f) or die "$! : $f";
-		while(<$fh>){chomp; my @a=split/\t/,$_;
-			for(my $j=0; $j < $#a-5; $j++){
-				my $tagj=$tag.".c".$j;
-				$cols->{$tagj}=1;
-				$r->{join("\t",@a[0..5])}{$tagj}=$a[$j+6];
-			}
-		}	
-		close($fh);
-	}
-	my %res=();
-	my $i=0;
-	my %cols=();
-	foreach my $f (@fctr){
-		readf($f,\%res,"ctr".$i,$option,\%cols); $i++;
-	}
-	$i=0;
-	foreach my $f (@ftrt){
-		readf($f,\%res,"trt".$i,$option,\%cols); $i++;
-	}
-	print join("\t",("chrom","start","end","name","score","strand")),"\t";
-	print join("\t",sort keys %cols),"\n";
-	foreach my $k (keys %res){
-		print $k;
-		foreach my $c (sort keys %cols){
-			my $v=0; $v=$res{$k}{$c} if defined $res{$k}{$c};
-			print "\t",$v;
-		}
-		print "\n";
-	}
-'
-
-}
-
-splicing.table.test(){
-	echo \
-"chr1	100	200	s	0	+	1	2	
-chr1	100	101	u	0	+	3	4
-chr1	50	200	s	0	-	5	6
-chr1	200	201	u	0	-	7	8
-chr1	199	200	u	0	+	9	10" > tmp.a
-
-splicing.table tmp.a tmp.a,tmp.a
-
-	echo \
-"chr1	100	200	s	0	+	1
-chr1	100	101	u	0	+	3
-chr1	50	200	s	0	-	5
-chr1	200	201	u	0	-	7
-chr1	199	200	u	0	+	9" > tmp.a
-splicing.table tmp.a tmp.a,tmp.a
-
-}
 
 splicing.table2dexseq(){
 ## remove entries having one exon 
