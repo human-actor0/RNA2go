@@ -7,9 +7,9 @@ $FUNCNAME <tag>:<bed> [<tag>:<bed>..] [options]
 "
 if [ $# -lt 1 ];then echo "$usage"; return; fi
 cmd='use strict;
-	my $cmd="'$1'"; my $tmp="'${@}'"; 
+	my $cmd="'$1'"; my $tmp=" '${@}'"; 
 	my %opts=map {$_=>1} $tmp=~/\s(-\w)/g; 
-	$tmp=~s/^-\w//;$tmp=~s/\s-\w//g; $tmp=~s/^\s+|\s+$//g;
+	$tmp=~s/\s-\w//g; $tmp=~s/^\s+|\s+$//g;
 	my @files=split/\s+/,$tmp;
 	my %res=();
 	my %res_len=();
