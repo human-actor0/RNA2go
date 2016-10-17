@@ -60,7 +60,7 @@ $FUNCNAME <table> <ctr_prefix> <trt_prefix> <count1_suffix> <cout2_suffix> <outp
 	library(edgeR);
 	CTR="^'$2'"; TRT="^'$3'"; 
 	C1="'$4'$"; C2="'$5'$";
-	tt=read.table("stdin",header=T,check.names=F);
+	tt=read.table("'$1'",header=T,check.names=F);
 	cn=colnames(tt);
 	m=tt[,c(grep(CTR,cn), grep(TRT,cn))];
 
