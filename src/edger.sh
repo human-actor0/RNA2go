@@ -30,8 +30,9 @@ $FUNCNAME <table> <ctr_col> <trt_col> <out>
 
 	fit=glmFit(y$counts, H1, y$tagwise.dispersion,offset=0,prior.count=0)
 	llh=glmLRT(fit,coef=coef)
-	nn=paste("logFC",TRT,"/",CTR,sep="")
-	tt[[nn]]=llh$table$logFC;
+	#nn=paste("logFC",TRT,"/",CTR,sep="")
+	tt[["logCPM"]]=llh$table$logCPM;
+	tt[["logFC"]]=llh$table$logFC;
 	tt[["pval"]]=llh$table$PValue;
 	##res=data.frame(tt, nn=llh$table$logFC, pval=llh$table$PValue)
 	## chrom start end logFC pval
