@@ -35,15 +35,15 @@ rm tmp.*
 
 
 bedtable.intersect(){
-usage="$FUNCNAME <a.bedtable> <b.bedtable> <output> [options]
+usage="$FUNCNAME <a.bedtable> <b.bedtable> [options]
 [options]: same as the options in intersectBed 
 ";
-opts="${@:4}"
-if [ $# -lt 3 ];then echo "$usage"; return; fi
-	bedtable.head $1 -v > $3.abed
-	bedtable.head $2 -v > $3.bbed
-	intersectBed -a $3.abed -b $3.bbed $opts  > $3
-	rm $3.*	
+if [ $# -lt 2 ];then echo "$usage"; return; fi
+	local tmpd=`hm util mktempd`;
+	bedtable.head $1 -v > $tmpd/abed
+	bedtable.head $2 -v > $tmpd/bbed
+	intersectBed -a $tmpd/abed -b $tmpd/bbed ${@:3}  > $3
+	rm -rf $tmpd
 }
 
 bedtable.test(){
