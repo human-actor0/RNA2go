@@ -1,9 +1,9 @@
+
 bed.table(){
 usage="
 merge scores of bed files. consider comma delimited scores too. 
 $FUNCNAME <tag>:<bed> [<tag>:<bed>..] [options]
  [options] :
-	-g : merge by gene name
 "
 if [ $# -lt 1 ];then echo "$usage"; return; fi
 cmd='use strict;
@@ -23,9 +23,7 @@ cmd='use strict;
 		open(my $fh, "<", $file) or die  "$! $file";
 		while(<$fh>){chomp; my @a=split/\t/,$_;
 			my @s=split/,/,$a[4]; $a[4]=0; 
-			my $k;
-			if( defined $opts{"-g"} ){ $k=$a[3];
-			}else{ $k=join("\t",@a[0..5]); }
+			my $k=join("\t",@a[0..5]);
 			$res_len{$k} += $a[2]-$a[1];
 			if( defined $res{$k}{$tag}){
 				for(my $j=0; $j<=$#s; $j++){
@@ -41,18 +39,10 @@ cmd='use strict;
 	}
 	## print header
 	print map{"#".$_."\n"} @files;
-	if( defined $opts{"-g"}){
-		print "gene\tgene.len";
-	}else{
-		print "chrom\tstart\tend\tgene\tscore\tstrand";
-	}
+	print "chrom\tstart\tend\tgene\tscore\tstrand";
 	foreach my $t (keys %tags){
 		foreach my $j (0..($nc-1)){
-			if( defined $opts{"-g"} ){
-				print "\t$t.g$j";
-			}else{
-				print "\t$t.c$j";
-			}
+			print "\t$t.c$j";
 		}
 	}
 	print "\n";
@@ -62,9 +52,6 @@ cmd='use strict;
 	foreach my $k (keys %res){
 		my @a=split/\t/,$k;
 		print $k;
-		if( defined $opts{"-g"} ){
-			print "\t",$res_len{$k};
-		}
 		foreach my $t (keys %tags){
 			my $v=$null;
 			if(defined $res{$k}{$t}){
@@ -88,8 +75,7 @@ echo \
 "chr1	1	2	n1	1,2	+
 chr1	3	4	n3	1,2	+" > tmp-1.b
 bed.table ctr:tmp.a ctr:tmp.a trt:tmp-1.b
-bed.table -g ctr:tmp.a ctr:tmp.a trt:tmp-1.b
-rm tmp.*
+rm tmp*
 }
 bed.sort(){
 	sort -k1,1 -k2,3n
