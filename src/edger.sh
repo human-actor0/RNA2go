@@ -53,15 +53,16 @@ rm tmp.*
 }
 edger.interact(){
 usage(){ echo "
-$FUNCNAME <table> <ctr_prefix> <trt_prefix> <count1_suffix> <cout2_suffix> <output> [option]
+$FUNCNAME <table> <ctr_prefix> <trt_prefix> <count1_suffix> <cout2_suffix> 
 "
 }
-	if [ $# -lt 6 ];then usage;return; fi
+	if [ $# -lt 5 ];then usage;return; fi
+	local tmpd=`hm util mktempd`;
 	cmd='
 	library(edgeR);
 	CTR="^'$2'"; TRT="^'$3'"; 
 	C1="'$4'$"; C2="'$5'$";
-	tt=read.table("'$1'",header=T,check.names=F);
+	tt=read.table("'${1/-/stdin}'",header=T,check.names=F);
 	cn=colnames(tt);
 	m=tt[,c(grep(CTR,cn), grep(TRT,cn))];
 
@@ -87,15 +88,19 @@ $FUNCNAME <table> <ctr_prefix> <trt_prefix> <count1_suffix> <cout2_suffix> <outp
 
 	fit=glmFit(y$counts, H1, y$tagwise.dispersion,offset=0,prior.count=0)
 	llh=glmLRT(fit,coef=coef)
-	nn=paste("logFC",TRT,"/",CTR,sep="")
-	tt[[nn]]=llh$table$logFC;
+	#nn=paste("logFC",TRT,"/",CTR,sep="")
+	#tt[[nn]]=llh$table$logFC;
+	tt[["logCPM"]]=llh$table$logCPM;
+	tt[["logFC"]]=llh$table$logFC;
 	tt[["pval"]]=llh$table$PValue;
 	##res=data.frame(tt, nn=llh$table$logFC, pval=llh$table$PValue)
 	## chrom start end logFC pval
-	write.table(tt,file="'$6'", col.names=T,quote=F,row.names=F,sep="\t");
+	write.table(tt,file="'$tmpd/out'", col.names=T,quote=F,row.names=F,sep="\t");
 	' 
-	echo "$cmd" > $6.cmd
-	R --no-save -f $6.cmd 
+	echo "$cmd" > $tmpd/cmd
+	R --no-save -f $tmpd/cmd 
+	cat $tmpd/out
+	rm -rf $tmpd
 }
 edger.interact.test(){
 echo \
