@@ -98,7 +98,7 @@ $FUNCNAME <table> <ctr_prefix> <trt_prefix> <count1_suffix> <cout2_suffix>
 	write.table(tt,file="'$tmpd/out'", col.names=T,quote=F,row.names=F,sep="\t");
 	' 
 	echo "$cmd" > $tmpd/cmd
-	R --no-save -f $tmpd/cmd 
+	R --no-save -f $tmpd/cmd  &> $tmpd/log
 	cat $tmpd/out
 	rm -rf $tmpd
 }
