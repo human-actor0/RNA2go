@@ -107,7 +107,8 @@ echo \
 "x@trt@ctr	trt1.c1	trt1.c2	trc.c1	trt2.c1	trt2.c2	ctr1.c1	ctr1.c2
 a	1	10	NA	11	10	11	10
 b	2	20	NA	22	20	22	20
-c	3	30	NA	33	30	33	30" | edger.interact - ctr trt c2 c1 out
+c	3	30	NA	33	30	33	30" \
+| edger.interact - ctr trt c2 c1 
 
 }
 
