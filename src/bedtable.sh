@@ -42,7 +42,7 @@ if [ $# -lt 2 ];then echo "$usage"; return; fi
 	local tmpd=`hm util mktempd`;
 	bedtable.head $1 -v > $tmpd/abed
 	bedtable.head $2 -v > $tmpd/bbed
-	intersectBed -a $tmpd/abed -b $tmpd/bbed ${@:3}  > $3
+	intersectBed -a $tmpd/abed -b $tmpd/bbed ${@:3}  
 	rm -rf $tmpd
 }
 
